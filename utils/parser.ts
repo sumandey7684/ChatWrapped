@@ -12,8 +12,15 @@ const EMOJI_REGEX = /\p{Emoji_Presentation}/gu;
 
 // Common Stop Words to filter out
 const STOP_WORDS = new Set([
-  'the','be','to','of','and','a','in','that','have','i','it','for','not','on','with','he','as','you','do','at','this','but','his','by','from','they','we','say','her','she','or','an','will','my','one','all','would','there','their','what','so','up','out','if','about','who','get','which','go','me','when','make','can','like','time','no','just','him','know','take','people','into','year','your','good','some','could','them','see','other','than','then','now','look','only','come','its','over','think','also','back','after','use','two','how','our','work','first','well','way','even','new','want','because','any','these','give','day','most','us', 'is', 'are', 'was', 'were', 'has', 'had', 'been', 'ok', 'okay', 'lol', 'haha', 'yeah', 'yes', 'hey', 'hi', 'hello', 'omg', 'did', 'done', 'too', 'very', 'much', 'really', 'got', 'don', 'dont', 'didnt', 'can', 'cant', 'cannot', 'image', 'omitted', 'audio', 'video', 'gif', 'sticker', 'pm', 'am'
+  'the','be','to','of','and','a','in','that','have','i','it','for','not','on','with','he','as','you','do','at','this','but','his','by','from','they','we','say','her','she','or','an','will','my','one','all','would','there','their','what','so','up','out','if','about','who','get','which','go','me','when','make','can','like','time','no','just','him','know','take','people','into','year','your','good','some','could','them','see','other','than','then','now','look','only','come','its','over','think','also','back','after','use','two','how','our','work','first','well','way','even','new','want','because','any','these','give','day','most','us', 'is', 'are', 'was', 'were', 'has', 'had', 'been', 'ok', 'okay', 'lol', 'haha', 'yeah', 'yes', 'hey', 'hi', 'hello', 'omg', 'did', 'done', 'too', 'very', 'much', 'really', 'got', 'don', 'dont', 'didnt', 'can', 'cant', 'cannot', 'pm', 'am', 'omitted'
 ]);
+
+// Media phrases to detect and filter
+const MEDIA_PHRASES = [
+  'image omitted', 'video omitted', 'audio omitted', 'sticker omitted', 
+  'gif omitted', 'media omitted', 'contact card omitted', 'document omitted',
+  '<media omitted>'
+];
 
 // Extended Color Palette
 const COLORS = [
@@ -126,6 +133,7 @@ export const analyzeMessages = (messages: Message[], yearFilter?: number): Analy
     byeCount: number;
     textOnlyCount: number;
     emojiMsgCount: number;
+    mediaMessageCount: number; // New metric
     shortMessageCount: number;
     longMessageCount: number;
     oneSidedCount: number;
@@ -164,8 +172,8 @@ export const analyzeMessages = (messages: Message[], yearFilter?: number): Analy
       userMap.set(msg.sender, { 
         count: 0, words: 0, emojis: new Map(), wordFreq: new Map(),
         replyTimes: [], morningCount: 0, nightCount: 0, byeCount: 0,
-        textOnlyCount: 0, emojiMsgCount: 0, shortMessageCount: 0, longMessageCount: 0,
-        oneSidedCount: 0
+        textOnlyCount: 0, emojiMsgCount: 0, mediaMessageCount: 0,
+        shortMessageCount: 0, longMessageCount: 0, oneSidedCount: 0
       });
     }
     const uStat = userMap.get(msg.sender)!;
@@ -173,64 +181,76 @@ export const analyzeMessages = (messages: Message[], yearFilter?: number): Analy
 
     // Basic Stats
     uStat.count++;
-    const tokens = msg.content.trim().split(/\s+/);
-    const wordCount = tokens.length;
-    uStat.words += wordCount;
-
-    // Longest Message
-    if (wordCount > longestMsg.wordCount) {
-      longestMsg = { content: msg.content, sender: msg.sender, date: msg.date, wordCount };
-    }
-
-    // Length Classification
-    if (wordCount <= 3) uStat.shortMessageCount++;
-    if (wordCount >= 12) uStat.longMessageCount++;
-
-    // Emoji Analysis
-    const emojiMatches = msg.content.match(EMOJI_REGEX);
-    if (emojiMatches) {
-      uStat.emojiMsgCount++;
-      emojiMatches.forEach(e => uStat.emojis.set(e, (uStat.emojis.get(e) || 0) + 1));
-    } else {
-      uStat.textOnlyCount++;
-    }
-
-    // Word & Phrase Analysis
-    const cleanContent = msg.content.toLowerCase().replace(/[^\w\s']/g, ''); // keep apostrophes
-    const words = cleanContent.split(/\s+/).filter(w => w.length > 0);
     
-    // Words
-    words.forEach(w => {
-      const cleanW = w.replace(/[']/g, '');
-      if (cleanW.length > 2 && !STOP_WORDS.has(cleanW)) {
-        uStat.wordFreq.set(cleanW, (uStat.wordFreq.get(cleanW) || 0) + 1);
-        if (!wordGlobalMap[cleanW]) wordGlobalMap[cleanW] = {};
-        wordGlobalMap[cleanW][msg.sender] = (wordGlobalMap[cleanW][msg.sender] || 0) + 1;
+    // Check for Media
+    const contentLower = msg.content.toLowerCase();
+    const isMedia = MEDIA_PHRASES.some(phrase => contentLower.includes(phrase));
+
+    if (isMedia) {
+      uStat.mediaMessageCount++;
+      // Skip word/phrase/length analysis for media
+    } else {
+      // Regular Text Analysis
+      const tokens = msg.content.trim().split(/\s+/);
+      const wordCount = tokens.length;
+      uStat.words += wordCount;
+
+      // Longest Message
+      if (wordCount > longestMsg.wordCount) {
+        longestMsg = { content: msg.content, sender: msg.sender, date: msg.date, wordCount };
       }
-    });
 
-    // Bigram Phrases (2 words)
-    // Only analyze if message is relatively short to avoid noise, or analyze all?
-    // Let's analyze all but filter for stop words.
-    for (let i = 0; i < words.length - 1; i++) {
-        const w1 = words[i];
-        const w2 = words[i+1];
-        // At least one word must NOT be a stop word to be interesting
-        if (!STOP_WORDS.has(w1) || !STOP_WORDS.has(w2)) {
-            const phrase = `${w1} ${w2}`;
-            if (!phraseMap.has(phrase)) {
-                phraseMap.set(phrase, { count: 0, users: new Map() });
+      // Length Classification
+      if (wordCount <= 3) uStat.shortMessageCount++;
+      if (wordCount >= 12) uStat.longMessageCount++;
+
+      // Emoji Analysis
+      const emojiMatches = msg.content.match(EMOJI_REGEX);
+      if (emojiMatches) {
+        uStat.emojiMsgCount++;
+        emojiMatches.forEach(e => uStat.emojis.set(e, (uStat.emojis.get(e) || 0) + 1));
+      } else {
+        uStat.textOnlyCount++;
+      }
+
+      // Word & Phrase Analysis (Safety Check: must have words, not just emojis)
+      const cleanContent = msg.content.toLowerCase().replace(/[^\w\s']/g, ''); // keep apostrophes
+      const words = cleanContent.split(/\s+/).filter(w => w.length > 0);
+      
+      // Only analyze words if it's not an emoji-only message (heuristic: has words > 0)
+      if (words.length > 0) {
+        // Words
+        words.forEach(w => {
+          const cleanW = w.replace(/[']/g, '');
+          if (cleanW.length > 2 && !STOP_WORDS.has(cleanW)) {
+            uStat.wordFreq.set(cleanW, (uStat.wordFreq.get(cleanW) || 0) + 1);
+            if (!wordGlobalMap[cleanW]) wordGlobalMap[cleanW] = {};
+            wordGlobalMap[cleanW][msg.sender] = (wordGlobalMap[cleanW][msg.sender] || 0) + 1;
+          }
+        });
+
+        // Bigram Phrases (2 words)
+        for (let i = 0; i < words.length - 1; i++) {
+            const w1 = words[i];
+            const w2 = words[i+1];
+            // At least one word must NOT be a stop word to be interesting
+            if (!STOP_WORDS.has(w1) || !STOP_WORDS.has(w2)) {
+                const phrase = `${w1} ${w2}`;
+                if (!phraseMap.has(phrase)) {
+                    phraseMap.set(phrase, { count: 0, users: new Map() });
+                }
+                const pEntry = phraseMap.get(phrase)!;
+                pEntry.count++;
+                pEntry.users.set(msg.sender, (pEntry.users.get(msg.sender) || 0) + 1);
             }
-            const pEntry = phraseMap.get(phrase)!;
-            pEntry.count++;
-            pEntry.users.set(msg.sender, (pEntry.users.get(msg.sender) || 0) + 1);
         }
-    }
+      }
 
-    // Specific Phrase Detection
-    if (GM_REGEX.test(msg.content)) uStat.morningCount++;
-    if (GN_REGEX.test(msg.content)) uStat.nightCount++;
-    if (BYE_REGEX.test(msg.content)) uStat.byeCount++;
+      // Specific Phrase Detection
+      if (GM_REGEX.test(msg.content)) uStat.morningCount++;
+      if (GN_REGEX.test(msg.content)) uStat.nightCount++;
+      if (BYE_REGEX.test(msg.content)) uStat.byeCount++;
+    }
 
     // Burst Detection
     if (index > 0) {
@@ -348,7 +368,7 @@ export const analyzeMessages = (messages: Message[], yearFilter?: number): Analy
       name,
       messageCount: stats.count,
       wordCount: stats.words,
-      avgLength: Math.round(stats.words / stats.count),
+      avgLength: stats.words > 0 ? Math.round(stats.words / (stats.count - stats.mediaMessageCount)) : 0, // Adjusted to exclude media msgs from denom if preferred, but usually avgLength = words / total
       emojis: sortedEmojis,
       color: COLORS[index % COLORS.length],
       topWords: sortedWords,
@@ -358,6 +378,7 @@ export const analyzeMessages = (messages: Message[], yearFilter?: number): Analy
       byeCount: stats.byeCount,
       textMessageCount: stats.textOnlyCount,
       emojiMessageCount: stats.emojiMsgCount,
+      mediaMessageCount: stats.mediaMessageCount,
       shortMessageCount: stats.shortMessageCount,
       longMessageCount: stats.longMessageCount,
       oneSidedConversationsCount: stats.oneSidedCount

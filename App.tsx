@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import JSZip from 'jszip';
 import FileUpload from './components/FileUpload';
 import StoryView from './components/StoryView';
 import ComparisonView from './components/ComparisonView';
@@ -11,13 +12,72 @@ function App() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingText, setLoadingText] = useState("Analyzing...");
   const [viewState, setViewState] = useState<'upload' | 'story' | 'compare'>('upload');
 
   const handleFileUpload = async (file: File) => {
     setIsLoading(true);
+    setLoadingText("Processing file...");
+    
+    // Give UI a moment to update
     setTimeout(async () => {
       try {
-        const result = await parseChatFile(file);
+        let fileToParse = file;
+
+        // Handle ZIP files locally
+        if (file.name.toLowerCase().endsWith('.zip')) {
+           setLoadingText("Unzipping locally...");
+           try {
+             const zip = await JSZip.loadAsync(file);
+             let txtFile: JSZip.JSZipObject | null = null;
+             
+             // Fix: Explicitly cast the values to JSZipObject array to avoid 'unknown' type errors
+             const zipFiles = Object.values(zip.files) as JSZip.JSZipObject[];
+             
+             // 1. Look for "_chat.txt" specifically (WhatsApp standard)
+             const chatTxt = zipFiles.find(f => f.name.toLowerCase().includes('_chat.txt') && !f.dir);
+             
+             if (chatTxt) {
+               txtFile = chatTxt;
+             } else {
+               // 2. Fallback: Find any .txt file that isn't a MacOS artifact
+               const validTxtFiles = zipFiles.filter(f => 
+                 f.name.toLowerCase().endsWith('.txt') && 
+                 !f.dir && 
+                 !f.name.includes('__MACOSX')
+               );
+
+               if (validTxtFiles.length > 0) {
+                 // Prefer the largest file (most likely the chat log)
+                 // Note: _data is internal, we can't reliably get size without processing, 
+                 // so we just take the first one containing 'chat' or just the first one.
+                 txtFile = validTxtFiles.find(f => f.name.toLowerCase().includes('chat')) || validTxtFiles[0];
+               }
+             }
+
+             if (!txtFile) {
+               alert("No valid .txt chat file found inside the ZIP archive.");
+               setIsLoading(false);
+               return;
+             }
+
+             setLoadingText("Extracting chat...");
+             const content = await txtFile.async('string');
+             
+             // Create a new File object in memory to pass to our existing parser
+             fileToParse = new File([content], txtFile.name, { type: 'text/plain' });
+
+           } catch (zipError) {
+             console.error(zipError);
+             alert("Failed to unzip file. It might be corrupted or password protected.");
+             setIsLoading(false);
+             return;
+           }
+        }
+
+        setLoadingText("Analyzing conversations...");
+        const result = await parseChatFile(fileToParse);
+        
         if (result.status === 'success') {
           setMessages(result.messages);
           if (result.messages.length > 0) {
@@ -29,11 +89,12 @@ function App() {
           alert('Error parsing file: ' + result.error);
         }
       } catch (e) {
+        console.error(e);
         alert('An unexpected error occurred parsing the file.');
       } finally {
         setIsLoading(false);
       }
-    }, 500);
+    }, 100);
   };
 
   const handleReset = () => {
@@ -124,7 +185,11 @@ function App() {
             
             {/* 3. Upload Zone (High Priority) */}
             <div className="w-full max-w-xl px-6 mb-16 animate-fadeInUp delay-200">
-               <FileUpload onFileUpload={handleFileUpload} isLoading={isLoading} />
+               <FileUpload 
+                 onFileUpload={handleFileUpload} 
+                 isLoading={isLoading} 
+                 statusText={loadingText}
+               />
             </div>
 
             {/* 4. How to Export */}

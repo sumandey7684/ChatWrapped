@@ -24,6 +24,7 @@ export interface UserStat {
   byeCount: number;     // "bye", "gn"
   textMessageCount: number; // Msgs without emojis
   emojiMessageCount: number; // Msgs with emojis
+  mediaMessageCount: number; // Images, videos, stickers
   shortMessageCount: number; // <= 3 words
   longMessageCount: number;  // >= 12 words
   oneSidedConversationsCount: number; // Days where user sent >80% of msgs

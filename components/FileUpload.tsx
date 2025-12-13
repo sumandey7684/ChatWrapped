@@ -1,12 +1,13 @@
 import React, { useState, useCallback } from 'react';
-import { Upload, FileWarning } from 'lucide-react';
+import { Upload, FileWarning, FileArchive } from 'lucide-react';
 
 interface FileUploadProps {
   onFileUpload: (file: File) => void;
   isLoading: boolean;
+  statusText?: string;
 }
 
-const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, isLoading }) => {
+const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, isLoading, statusText = "Analyzing your chat..." }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,18 +23,14 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, isLoading }) => {
 
   const validateAndUpload = (file: File) => {
     setError(null);
+    const name = file.name.toLowerCase();
     
     // Check extension
-    if (!file.name.toLowerCase().endsWith('.txt')) {
-      if (file.name.toLowerCase().endsWith('.zip')) {
-        setError('Please extract the .zip file and upload the .txt file inside.');
-      } else {
-        setError('Only .txt files from WhatsApp exports are supported.');
-      }
-      return;
+    if (name.endsWith('.txt') || name.endsWith('.zip')) {
+      onFileUpload(file);
+    } else {
+      setError('Only .txt or .zip files from WhatsApp exports are supported.');
     }
-
-    onFileUpload(file);
   };
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -66,13 +63,13 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, isLoading }) => {
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        onClick={() => document.getElementById('file-input')?.click()}
+        onClick={() => !isLoading && document.getElementById('file-input')?.click()}
       >
         <input 
           type="file" 
           id="file-input" 
           className="hidden" 
-          accept=".txt"
+          accept=".txt,.zip"
           onChange={handleFileInput}
           disabled={isLoading}
         />
@@ -88,7 +85,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, isLoading }) => {
           
           <div>
             <h3 className="text-xl md:text-2xl font-bold text-white">
-              {isLoading ? 'Analyzing your chat...' : 'Drop your chat here'}
+              {isLoading ? statusText : 'Drop your chat here'}
             </h3>
             <p className="text-zinc-400 mt-2 text-sm font-medium">
               Your story starts instantly. Nothing is uploaded.
@@ -96,8 +93,10 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, isLoading }) => {
           </div>
 
           {!isLoading && (
-            <div className="text-xs text-zinc-600 mt-2 max-w-xs mx-auto">
-               Supports WhatsApp <span className="font-mono text-zinc-400 bg-zinc-800 px-1.5 py-0.5 rounded">_chat.txt</span>
+            <div className="flex items-center gap-2 text-xs text-zinc-600 mt-2 max-w-xs mx-auto justify-center">
+               <span className="font-mono text-zinc-400 bg-zinc-800 px-1.5 py-0.5 rounded">.txt</span>
+               <span>or</span>
+               <span className="font-mono text-zinc-400 bg-zinc-800 px-1.5 py-0.5 rounded flex items-center gap-1"><FileArchive size={10}/> .zip</span>
             </div>
           )}
         </div>

@@ -4,7 +4,7 @@ import { AnalysisResult, UserStat } from '../types';
 import WordSearch from './WordSearch';
 import { 
   MessageSquarePlus, Camera, ChevronRight, ChevronLeft, 
-  Search, Zap, Moon, Sun, MessageCircle, AlignLeft
+  Search, Zap, Moon, Sun, MessageCircle, AlignLeft, Image
 } from 'lucide-react';
 
 interface StoryViewProps {
@@ -23,7 +23,7 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
   const lastNavTime = useRef(0);
   const finalCardRef = useRef<HTMLDivElement>(null);
 
-  const TOTAL_SLIDES = 15;
+  const TOTAL_SLIDES = 16; // Increased by 1 for Media slide
   const isGroup = data.users.length > 2;
 
   useEffect(() => {
@@ -35,7 +35,7 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
   const defaultUser: UserStat = {
     name: '?', color: '#ccc', messageCount: 0, wordCount: 0, avgLength: 0, emojis: [], topWords: [], 
     avgReplyTimeMinutes: 0, morningCount: 0, nightCount: 0, byeCount: 0, textMessageCount: 0, 
-    emojiMessageCount: 0, shortMessageCount: 0, longMessageCount: 0, oneSidedConversationsCount: 0
+    emojiMessageCount: 0, mediaMessageCount: 0, shortMessageCount: 0, longMessageCount: 0, oneSidedConversationsCount: 0
   };
 
   const u1 = data.users[0] || defaultUser;
@@ -120,7 +120,7 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
           </div>
         );
 
-      /* 3. WEEKLY RHYTHM (NEW) */
+      /* 3. WEEKLY RHYTHM */
       case 2:
         const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         const maxDay = Math.max(...data.dayOfWeekStats);
@@ -149,8 +149,36 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
           </div>
         );
 
-      /* 4. PEAK HOUR */
+      /* 4. MEDIA MOMENTS (NEW SLIDE) */
       case 3:
+        const totalMedia = data.users.reduce((acc, u) => acc + u.mediaMessageCount, 0);
+        
+        return (
+          <div className="flex flex-col justify-center h-full px-6 text-center">
+             <div className="w-20 h-20 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-blue-500/20 animate-scaleIn">
+               <Image size={36} className="text-blue-400" />
+             </div>
+             
+             <h2 className="text-2xl font-bold uppercase tracking-widest text-zinc-500 mb-2">Media Moments 📸</h2>
+             <p className="text-xs text-zinc-600 mb-8">Images, videos, and files shared</p>
+
+             <div className="text-6xl font-black text-white mb-10 animate-fadeInUp">
+               {formatNum(totalMedia)}
+             </div>
+
+             <div className="space-y-4 max-w-xs mx-auto w-full">
+               {[u1, u2].map((u, i) => (
+                  <div key={i} className="flex items-center justify-between bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 animate-slideInRight" style={{ animationDelay: `${i*100}ms` }}>
+                    <div className="font-bold text-zinc-300">{u.name}</div>
+                    <div className="font-mono text-blue-400 font-bold">{formatNum(u.mediaMessageCount)}</div>
+                  </div>
+               ))}
+             </div>
+          </div>
+        );
+
+      /* 5. PEAK HOUR */
+      case 4:
         const isNight = data.busiestHour >= 18 || data.busiestHour < 6;
         return (
           <div className="flex flex-col justify-center h-full px-8 text-center">
@@ -158,17 +186,19 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
             <h2 className="text-7xl font-black mb-4 animate-scaleIn">
               {data.busiestHour}:00
             </h2>
-            <div className="inline-block bg-white/10 px-4 py-2 rounded-lg mb-6">
+            <div className="inline-block bg-white/10 px-4 py-2 rounded-lg mb-2">
                <span className="text-sm font-bold uppercase tracking-widest text-white">Most Active Hour</span>
             </div>
+            <p className="text-xs text-zinc-500 mb-6">Hour with the highest message activity</p>
+
             <p className="text-xl text-zinc-400 animate-fadeIn delay-300 opacity-0 fill-mode-forwards">
               "This is when conversations usually happen."
             </p>
           </div>
         );
 
-      /* 5. BURSTS (NEW) */
-      case 4:
+      /* 6. BURSTS */
+      case 5:
         return (
           <div className="flex flex-col justify-center h-full px-6">
             <div className="flex items-center gap-3 mb-8 text-orange-500 animate-pulse justify-center">
@@ -195,8 +225,8 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
           </div>
         );
 
-      /* 6. WHO TALKED MORE */
-      case 5:
+      /* 7. WHO TALKED MORE */
+      case 6:
         const p1 = (u1.messageCount / data.totalMessages) * 100;
         const p2 = (u2.messageCount / data.totalMessages) * 100;
         const w1 = animateReveal ? p1 : 50;
@@ -224,8 +254,8 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
           </div>
         );
 
-      /* 7. ONE SIDED DAYS (NEW) */
-      case 6:
+      /* 8. ONE SIDED DAYS */
+      case 7:
         const oneSidedUser = data.users.reduce((prev, curr) => (prev.oneSidedConversationsCount > curr.oneSidedConversationsCount) ? prev : curr);
         const hasOneSided = oneSidedUser.oneSidedConversationsCount > 0;
 
@@ -256,8 +286,8 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
           </div>
         );
 
-      /* 8. LONGEST MESSAGE (NEW) */
-      case 7:
+      /* 9. LONGEST MESSAGE */
+      case 8:
         return (
           <div className="flex flex-col justify-center h-full px-6">
             <h2 className="text-2xl font-bold uppercase tracking-widest text-zinc-500 mb-8 text-center">The Essayist</h2>
@@ -289,8 +319,8 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
           </div>
         );
 
-      /* 9. TEXT VS EMOJI BALANCE (ENHANCED) */
-      case 8:
+      /* 10. TEXT VS EMOJI BALANCE */
+      case 9:
         const totalU1 = u1.textMessageCount + u1.emojiMessageCount;
         const u1EmojiPct = totalU1 > 0 ? (u1.emojiMessageCount / totalU1) * 100 : 0;
         
@@ -331,11 +361,13 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
            </div>
         );
 
-      /* 10. MOST USED WORDS */
-      case 9:
+      /* 11. MOST USED WORDS */
+      case 10:
         return (
           <div className="flex flex-col justify-center h-full px-6">
-            <h2 className="text-3xl font-black mb-8 text-center text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-green-400">Signature Vocabulary</h2>
+            <h2 className="text-3xl font-black mb-2 text-center text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-green-400">Signature Vocabulary</h2>
+            <p className="text-xs text-zinc-500 text-center mb-8 uppercase tracking-wide">Words actually typed in messages</p>
+            
             <div className="space-y-6">
               {data.users.slice(0, 2).map((u, i) => (
                 <div key={i} className="bg-zinc-900/50 p-6 rounded-3xl border border-white/5 animate-slideInRight" style={{ animationDelay: `${i*200}ms` }}>
@@ -353,12 +385,13 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
           </div>
         );
 
-      /* 11. MOST REPEATED PHRASE (NEW) */
-      case 10:
+      /* 12. MOST REPEATED PHRASE */
+      case 11:
         const phrase = data.mostRepeatedPhrase;
         return (
           <div className="flex flex-col justify-center h-full px-6 text-center">
-             <h2 className="text-2xl uppercase tracking-widest text-zinc-500 mb-8">On Repeat</h2>
+             <h2 className="text-2xl uppercase tracking-widest text-zinc-500 mb-2">On Repeat</h2>
+             <p className="text-xs text-zinc-600 mb-8">Most frequently typed word sequence</p>
              
              {phrase ? (
                <div className="animate-scaleIn">
@@ -381,8 +414,8 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
           </div>
         );
 
-      /* 12. SILENCE BREAKER (ENHANCED) */
-      case 11:
+      /* 13. SILENCE BREAKER */
+      case 12:
         return (
           <div className="flex flex-col justify-center h-full px-8 text-center">
              <MessageSquarePlus className="w-20 h-20 text-pink-500 mx-auto mb-8 animate-bounce" />
@@ -401,8 +434,8 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
           </div>
         );
 
-      /* 13. LATE REPLIES */
-      case 12:
+      /* 14. LATE REPLIES */
+      case 13:
         const diffReply = u1.avgReplyTimeMinutes - u2.avgReplyTimeMinutes;
         const replyCaption = Math.abs(diffReply) < 2 
           ? "You both reply at the same speed!" 
@@ -412,7 +445,9 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
 
         return (
           <div className="flex flex-col justify-center h-full px-6">
-            <h2 className="text-3xl font-black text-center mb-12">Speed Check ⏱️</h2>
+            <h2 className="text-3xl font-black text-center mb-2">Speed Check ⏱️</h2>
+            <p className="text-xs text-zinc-500 text-center mb-8 uppercase tracking-wide">Average time taken to reply</p>
+            
             <div className="space-y-8">
                {data.users.slice(0, 2).map((u, i) => (
                  <div key={i} className="animate-slideInUp" style={{ animationDelay: `${i*150}ms` }}>
@@ -429,17 +464,22 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
             <p className="text-center text-zinc-300 mt-12 italic font-medium px-4">
                "{replyCaption}"
             </p>
+            <p className="text-center text-[10px] text-zinc-600 mt-4">
+               *Calculated only when conversation is active (gaps &lt; 6 hours)
+            </p>
           </div>
         );
 
-      /* 14. PERSONALITY SPECTRUM */
-      case 13:
+      /* 15. PERSONALITY SPECTRUM */
+      case 14:
         const user1 = data.users[0];
         const user2 = data.users[1] || data.users[0]; 
 
         return (
           <div className="flex flex-col justify-center h-full px-6">
-             <h2 className="text-2xl font-bold uppercase tracking-widest text-zinc-500 mb-12 text-center">Typing Styles</h2>
+             <h2 className="text-2xl font-bold uppercase tracking-widest text-zinc-500 mb-2 text-center">Typing Styles</h2>
+             <p className="text-xs text-zinc-600 mb-12 text-center">Based on average message length</p>
+             
              <div className="space-y-6">
                {[user1, user2].map((u, i) => {
                  const p = getPersonality(u.avgLength);
@@ -457,8 +497,8 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
           </div>
         );
 
-      /* 15. FINAL CARD */
-      case 14:
+      /* 16. FINAL CARD */
+      case 15:
         return (
           <div className="flex flex-col h-full pt-6 pb-12 px-6 overflow-y-auto scrollbar-hide">
             <h2 className="text-center text-lg font-bold mb-4 animate-fadeIn text-zinc-400">
@@ -492,8 +532,8 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
                     <div className="text-xl font-bold text-cyan-400">{data.busiestHour}:00</div>
                   </div>
                   <div>
-                    <div className="text-zinc-500 text-xs uppercase mb-1">Big Bursts</div>
-                    <div className="text-xl font-bold text-pink-400">{data.burstStats.count}</div>
+                    <div className="text-zinc-500 text-xs uppercase mb-1">Media Shared</div>
+                    <div className="text-xl font-bold text-blue-400">{formatNum(data.users.reduce((acc,u)=>acc+u.mediaMessageCount,0))}</div>
                   </div>
                </div>
 
