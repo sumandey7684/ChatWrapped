@@ -29,6 +29,12 @@ const Dashboard: React.FC<DashboardProps> = ({ data, selectedYear, onYearChange,
   const formatNumber = (num: number) => {
     return new Intl.NumberFormat('en-US', { notation: "compact", compactDisplay: "short" }).format(num);
   };
+  
+  const formatTime = (hour: number) => {
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const h = hour % 12 || 12;
+    return `${h}:00 ${ampm}`;
+  };
 
   const downloadReport = async () => {
     if (!dashboardRef.current) return;
@@ -173,7 +179,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, selectedYear, onYearChange,
             </div>
             <div className="hidden md:block text-right">
                <div className="text-4xl font-bold text-white">
-                 {data.busiestHour}:00
+                 {formatTime(data.busiestHour)}
                </div>
                <div className="text-sm text-cyan-400 font-medium uppercase tracking-wide">
                  Most Active Hour

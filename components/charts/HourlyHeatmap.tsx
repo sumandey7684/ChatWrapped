@@ -24,13 +24,27 @@ const HourlyHeatmap: React.FC<HourlyHeatmapProps> = ({ data }) => {
             tickLine={false}
             axisLine={false}
             interval={3}
-            tickFormatter={(h) => `${h}:00`}
+            tickFormatter={(h) => {
+              const hour = Number(h);
+              const ampm = hour >= 12 ? 'PM' : 'AM';
+              const hour12 = hour % 12 || 12;
+              return `${hour12} ${ampm}`;
+            }}
           />
           <Tooltip 
             cursor={{fill: '#27272a'}}
             contentStyle={{ backgroundColor: '#18181b', border: 'none', borderRadius: '8px' }}
             itemStyle={{ color: '#fff' }}
-            labelFormatter={(h) => `${h}:00 - ${Number(h)+1}:00`}
+            labelFormatter={(h) => {
+               const hour = Number(h);
+               const nextHour = (hour + 1) % 24;
+               const format = (n: number) => {
+                  const ampm = n >= 12 ? 'PM' : 'AM';
+                  const hour12 = n % 12 || 12;
+                  return `${hour12} ${ampm}`;
+               }
+               return `${format(hour)} - ${format(nextHour)}`;
+            }}
           />
           <Bar dataKey="count" radius={[4, 4, 0, 0]}>
             {data.map((_, index) => (

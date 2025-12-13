@@ -69,6 +69,12 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ messages, baseYear, onC
   };
 
   const formatNum = (n: number) => n >= 1000 ? `${(n/1000).toFixed(1)}k` : n;
+  
+  const formatTime = (hour: number) => {
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const h = hour % 12 || 12;
+    return `${h}:00 ${ampm}`;
+  };
 
   // Render Logic
   if (!targetYear || !targetData) {
@@ -148,7 +154,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ messages, baseYear, onC
                <div className="bg-zinc-900/50 p-6 rounded-2xl border border-white/5 flex items-center justify-between opacity-60">
                   <div>
                     <div className="text-sm text-zinc-500 font-bold mb-1">{targetYear}</div>
-                    <div className="text-4xl font-black">{targetData.busiestHour}:00</div>
+                    <div className="text-4xl font-black">{formatTime(targetData.busiestHour)}</div>
                   </div>
                   {getHourIcon(targetData.busiestHour)}
                </div>
@@ -162,7 +168,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ messages, baseYear, onC
                <div className="bg-gradient-to-r from-zinc-800 to-zinc-900 p-6 rounded-2xl border border-white/10 flex items-center justify-between animate-fadeInUp">
                   <div>
                     <div className="text-sm text-purple-400 font-bold mb-1">{baseYear}</div>
-                    <div className="text-5xl font-black text-white">{baseData.busiestHour}:00</div>
+                    <div className="text-5xl font-black text-white">{formatTime(baseData.busiestHour)}</div>
                   </div>
                   <div className="animate-pulse">
                     {getHourIcon(baseData.busiestHour)}
@@ -268,7 +274,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ messages, baseYear, onC
                  </div>
                  <div className="bg-zinc-800/50 p-4 rounded-2xl">
                     <div className="text-xs text-zinc-500 uppercase">Peak</div>
-                    <div className="text-xl font-black text-cyan-400">{baseData.busiestHour}:00</div>
+                    <div className="text-xl font-black text-cyan-400">{formatTime(baseData.busiestHour)}</div>
                  </div>
                  <div className="bg-zinc-800/50 p-4 rounded-2xl">
                     <div className="text-xs text-zinc-500 uppercase">Msgs</div>

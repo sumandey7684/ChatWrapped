@@ -1,10 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import html2canvas from 'html2canvas';
 import { AnalysisResult, UserStat } from '../types';
 import WordSearch from './WordSearch';
+import HourlyHeatmap from './charts/HourlyHeatmap';
 import { 
   MessageSquarePlus, Camera, ChevronRight, ChevronLeft, 
-  Search, Zap, Moon, Sun, MessageCircle, AlignLeft, Image
+  Search, Zap, Moon, Sun, MessageCircle, AlignLeft, Image,
+  Flame, TrendingUp, PauseCircle, Clock, BarChart3
 } from 'lucide-react';
 
 interface StoryViewProps {
@@ -15,22 +17,83 @@ interface StoryViewProps {
   canCompare: boolean;
 }
 
+// Define slide identifiers for dynamic ordering
+type SlideType = 
+  | 'INTRO' 
+  | 'TOTAL' 
+  | 'STREAKS' 
+  | 'SILENCE_DURATION'
+  | 'ACTIVE_GRAPH'
+  | 'PEAK_HOUR'
+  | 'WEEKLY'
+  | 'MEDIA'
+  | 'RAPID_FIRE'
+  | 'VOLUME'
+  | 'ONE_SIDED'
+  | 'ESSAYIST'
+  | 'BALANCE'
+  | 'VOCAB'
+  | 'REPEAT'
+  | 'SILENCE_BREAKER'
+  | 'SPEED'
+  | 'STYLES'
+  | 'FINAL';
+
 const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCompare, canCompare }) => {
-  const [currentSlide, setCurrentSlide] = useState(0);
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [animKey, setAnimKey] = useState(0);
   const [showSearch, setShowSearch] = useState(false);
   const [animateReveal, setAnimateReveal] = useState(false);
   const lastNavTime = useRef(0);
   const finalCardRef = useRef<HTMLDivElement>(null);
 
-  const TOTAL_SLIDES = 16; // Increased by 1 for Media slide
+  // Dynamic Slide Ordering based on data presence
+  const slides: SlideType[] = useMemo(() => {
+    const list: SlideType[] = ['INTRO', 'TOTAL'];
+    
+    // Streak Slide (Skip if < 2 days)
+    if (data.longestStreak >= 2) list.push('STREAKS');
+    
+    // Longest Silence (Skip if 0 or undefined)
+    if (data.silenceBreaker.maxSilenceHours > 1) list.push('SILENCE_DURATION');
+    
+    // Activity
+    list.push('ACTIVE_GRAPH');
+    list.push('PEAK_HOUR');
+    
+    // Rhythm & Content
+    list.push('WEEKLY');
+    if (data.users.some(u => u.mediaMessageCount > 0)) list.push('MEDIA');
+    
+    // Engagement
+    list.push('RAPID_FIRE'); // Previously Bursts
+    list.push('VOLUME');
+    
+    // Fun Stats
+    if (data.users.some(u => u.oneSidedConversationsCount > 0)) list.push('ONE_SIDED');
+    if (data.longestMessage.wordCount > 10) list.push('ESSAYIST');
+    
+    list.push('BALANCE'); // Text vs Emoji
+    if (data.users.some(u => u.topWords.length > 0)) list.push('VOCAB');
+    if (data.mostRepeatedPhrase) list.push('REPEAT');
+    
+    list.push('SILENCE_BREAKER'); // The person
+    list.push('SPEED');
+    list.push('STYLES');
+    list.push('FINAL');
+    
+    return list;
+  }, [data]);
+
+  const TOTAL_SLIDES = slides.length;
+  const currentSlideType = slides[currentSlideIndex];
   const isGroup = data.users.length > 2;
 
   useEffect(() => {
     setAnimateReveal(false);
     const t = setTimeout(() => setAnimateReveal(true), 100);
     return () => clearTimeout(t);
-  }, [currentSlide]);
+  }, [currentSlideIndex]);
 
   const defaultUser: UserStat = {
     name: '?', color: '#ccc', messageCount: 0, wordCount: 0, avgLength: 0, emojis: [], topWords: [], 
@@ -46,16 +109,29 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
     const isRapid = now - lastNavTime.current < 300;
     lastNavTime.current = now;
 
-    if (direction === 'next' && currentSlide < TOTAL_SLIDES - 1) {
-      setCurrentSlide(c => c + 1);
+    if (direction === 'next' && currentSlideIndex < TOTAL_SLIDES - 1) {
+      setCurrentSlideIndex(c => c + 1);
       if (!isRapid) setAnimKey(k => k + 1);
-    } else if (direction === 'prev' && currentSlide > 0) {
-      setCurrentSlide(c => c - 1);
+    } else if (direction === 'prev' && currentSlideIndex > 0) {
+      setCurrentSlideIndex(c => c - 1);
       if (!isRapid) setAnimKey(k => k + 1);
     }
   };
 
   const formatNum = (n: number) => n.toLocaleString();
+
+  const formatTime = (hour: number) => {
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const h = hour % 12 || 12;
+    return `${h}:00 ${ampm}`;
+  };
+
+  const formatDuration = (hours: number) => {
+    const days = Math.floor(hours / 24);
+    const remHours = Math.floor(hours % 24);
+    if (days > 0) return `${days}d ${remHours}h`;
+    return `${remHours} hours`;
+  };
   
   const downloadFinalCard = async () => {
     if (!finalCardRef.current) return;
@@ -76,9 +152,9 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
   };
 
   const renderSlide = () => {
-    switch (currentSlide) {
-      /* 1. INTRO */
-      case 0:
+    switch (currentSlideType) {
+      /* 0. INTRO */
+      case 'INTRO':
         return (
           <div className="flex flex-col items-center justify-center h-full text-center px-6 relative">
             <div className="w-20 h-20 bg-gradient-to-tr from-green-400 to-emerald-600 rounded-[2rem] flex items-center justify-center mb-8 shadow-2xl shadow-green-500/20 animate-scaleIn">
@@ -99,8 +175,8 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
           </div>
         );
 
-      /* 2. TOTAL MESSAGES */
-      case 1:
+      /* 1. TOTAL MESSAGES */
+      case 'TOTAL':
         return (
           <div className="flex flex-col justify-center h-full px-8 relative overflow-hidden">
             <div className="absolute -right-20 top-20 opacity-10 rotate-12">
@@ -120,10 +196,107 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
           </div>
         );
 
-      /* 3. WEEKLY RHYTHM */
-      case 2:
+      /* 2. STREAKS (NEW) */
+      case 'STREAKS':
+        return (
+          <div className="flex flex-col justify-center h-full px-8 text-center">
+             <div className="flex justify-center mb-8">
+               <Flame size={80} className="text-orange-500 animate-bounce-slow filter drop-shadow-[0_0_15px_rgba(249,115,22,0.5)]" />
+             </div>
+             
+             <div className="inline-block border border-orange-500/30 bg-orange-500/10 rounded-full px-6 py-2 text-orange-300 uppercase text-xs font-bold tracking-widest mb-8 mx-auto">
+               Streaks 🔥
+             </div>
+             
+             <h2 className="text-7xl font-black text-white mb-2 animate-scaleIn">
+               {data.longestStreak}
+             </h2>
+             <div className="text-2xl font-bold text-zinc-400 mb-8">days in a row</div>
+
+             <div className="bg-zinc-900/50 p-6 rounded-2xl border border-white/5 animate-fadeInUp delay-200">
+                <p className="text-zinc-300 italic text-lg">
+                   "You just couldn't stay away."
+                </p>
+                <p className="text-zinc-600 text-xs uppercase mt-2 font-bold tracking-wide">Longest continuous conversation</p>
+             </div>
+          </div>
+        );
+
+      /* 3. LONGEST SILENCE (NEW) */
+      case 'SILENCE_DURATION':
+        return (
+          <div className="flex flex-col justify-center h-full px-8 text-center relative overflow-hidden">
+             {/* Abstract background elements */}
+             <div className="absolute top-10 left-[-20px] text-zinc-800 opacity-20 animate-pulse-slow"><PauseCircle size={150} /></div>
+
+             <div className="flex justify-center mb-6">
+                <Moon size={60} className="text-indigo-400" />
+             </div>
+             
+             <h2 className="text-2xl font-bold uppercase tracking-widest text-zinc-500 mb-2">Longest Silence 💤</h2>
+             <p className="text-xs text-zinc-600 mb-8">The longest pause in conversation</p>
+
+             <div className="text-5xl font-black text-white mb-8 animate-fadeInUp leading-tight">
+               {formatDuration(data.silenceBreaker.maxSilenceHours)}
+             </div>
+
+             <div className="bg-gradient-to-br from-indigo-900/40 to-purple-900/40 p-6 rounded-2xl border border-indigo-500/20 animate-slideInUp delay-200">
+                <p className="text-indigo-200 text-lg font-medium">
+                   "It felt like an eternity."
+                </p>
+                <div className="h-1 w-full bg-indigo-500/20 mt-4 rounded-full overflow-hidden">
+                   <div className="h-full bg-indigo-500 w-1/2 animate-progress" />
+                </div>
+             </div>
+          </div>
+        );
+
+      /* 4. ACTIVE TIMES GRAPH (NEW) */
+      case 'ACTIVE_GRAPH':
+        return (
+          <div className="flex flex-col justify-center h-full px-6">
+             <div className="flex items-center justify-center gap-2 mb-2 text-cyan-400">
+                <BarChart3 size={24} />
+                <h2 className="text-xl font-bold uppercase tracking-widest">Active Times</h2>
+             </div>
+             <p className="text-xs text-zinc-500 text-center mb-8">When this chat is usually active</p>
+
+             <div className="h-64 w-full bg-zinc-900/50 rounded-2xl p-4 border border-zinc-800 animate-fadeInUp">
+                <HourlyHeatmap data={data.hourlyHeatmap} />
+             </div>
+
+             <div className="mt-8 text-center animate-fadeIn delay-300">
+                <div className="inline-flex items-center gap-2 bg-zinc-800/50 px-4 py-2 rounded-full text-sm text-zinc-300">
+                   <Clock size={14} />
+                   <span>Activity based on 24h cycle</span>
+                </div>
+             </div>
+          </div>
+        );
+
+      /* 5. PEAK HOUR */
+      case 'PEAK_HOUR':
+        const isNight = data.busiestHour >= 18 || data.busiestHour < 6;
+        return (
+          <div className="flex flex-col justify-center h-full px-8 text-center">
+            {isNight ? <Moon className="w-20 h-20 text-indigo-400 mx-auto mb-8" /> : <Sun className="w-20 h-20 text-yellow-400 mx-auto mb-8" />}
+            <h2 className="text-7xl font-black mb-4 animate-scaleIn">
+              {formatTime(data.busiestHour)}
+            </h2>
+            <div className="inline-block bg-white/10 px-4 py-2 rounded-lg mb-2">
+               <span className="text-sm font-bold uppercase tracking-widest text-white">Most Active Hour ⏰</span>
+            </div>
+            
+            <p className="text-xl text-zinc-400 animate-fadeIn delay-300 opacity-0 fill-mode-forwards mt-8">
+              "Peak chat hour unlocked."
+            </p>
+          </div>
+        );
+
+      /* 6. WEEKLY RHYTHM */
+      case 'WEEKLY':
         const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        const maxDay = Math.max(...data.dayOfWeekStats);
+        const maxDay = Math.max(...data.dayOfWeekStats) || 1;
         const busiestDayIndex = data.dayOfWeekStats.indexOf(maxDay);
         
         return (
@@ -132,9 +305,9 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
             
             <div className="flex items-end justify-between h-48 gap-2 mb-8">
               {data.dayOfWeekStats.map((count, i) => (
-                <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
+                <div key={i} className="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
                   <div className="relative w-full bg-zinc-800 rounded-t-lg transition-all duration-1000 ease-out flex items-end justify-center overflow-hidden" 
-                       style={{ height: animateReveal ? `${(count / maxDay) * 100}%` : '0%' }}>
+                       style={{ height: animateReveal ? `${(count / maxDay) * 150}px` : '0px' }}>
                      <div className={`w-full absolute bottom-0 top-0 opacity-20 ${i === busiestDayIndex ? 'bg-green-500' : 'bg-zinc-500'}`} />
                   </div>
                   <span className={`text-xs font-bold ${i === busiestDayIndex ? 'text-green-400' : 'text-zinc-600'}`}>{days[i]}</span>
@@ -149,10 +322,9 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
           </div>
         );
 
-      /* 4. MEDIA MOMENTS (NEW SLIDE) */
-      case 3:
+      /* 7. MEDIA MOMENTS */
+      case 'MEDIA':
         const totalMedia = data.users.reduce((acc, u) => acc + u.mediaMessageCount, 0);
-        
         return (
           <div className="flex flex-col justify-center h-full px-6 text-center">
              <div className="w-20 h-20 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-blue-500/20 animate-scaleIn">
@@ -177,34 +349,15 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
           </div>
         );
 
-      /* 5. PEAK HOUR */
-      case 4:
-        const isNight = data.busiestHour >= 18 || data.busiestHour < 6;
-        return (
-          <div className="flex flex-col justify-center h-full px-8 text-center">
-            {isNight ? <Moon className="w-20 h-20 text-indigo-400 mx-auto mb-8" /> : <Sun className="w-20 h-20 text-yellow-400 mx-auto mb-8" />}
-            <h2 className="text-7xl font-black mb-4 animate-scaleIn">
-              {data.busiestHour}:00
-            </h2>
-            <div className="inline-block bg-white/10 px-4 py-2 rounded-lg mb-2">
-               <span className="text-sm font-bold uppercase tracking-widest text-white">Most Active Hour</span>
-            </div>
-            <p className="text-xs text-zinc-500 mb-6">Hour with the highest message activity</p>
-
-            <p className="text-xl text-zinc-400 animate-fadeIn delay-300 opacity-0 fill-mode-forwards">
-              "This is when conversations usually happen."
-            </p>
-          </div>
-        );
-
-      /* 6. BURSTS */
-      case 5:
+      /* 8. RAPID FIRE CHATS (Was Bursts) */
+      case 'RAPID_FIRE':
         return (
           <div className="flex flex-col justify-center h-full px-6">
-            <div className="flex items-center gap-3 mb-8 text-orange-500 animate-pulse justify-center">
+            <div className="flex items-center gap-3 mb-4 text-orange-500 animate-pulse justify-center">
               <Zap size={32} />
-              <h2 className="text-2xl font-bold uppercase tracking-wider">Conversation Bursts</h2>
+              <h2 className="text-2xl font-bold uppercase tracking-wider">Rapid Fire Chats 🔥</h2>
             </div>
+            <p className="text-center text-xs text-zinc-500 mb-8">Moments when messages flew in fast</p>
             
             <div className="space-y-6">
                <div className="bg-zinc-900/80 p-6 rounded-3xl border-l-4 border-orange-500 animate-slideInRight delay-100">
@@ -215,7 +368,7 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
                
                <div className="bg-zinc-900/80 p-6 rounded-3xl border-l-4 border-red-500 animate-slideInRight delay-300">
                   <div className="text-5xl font-black text-white">{data.burstStats.maxBurst}</div>
-                  <div className="text-zinc-500 text-sm font-medium mt-2">Messages in single burst</div>
+                  <div className="text-zinc-500 text-sm font-medium mt-2">Messages in a single burst</div>
                </div>
             </div>
 
@@ -225,8 +378,8 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
           </div>
         );
 
-      /* 7. WHO TALKED MORE */
-      case 6:
+      /* 9. VOLUME */
+      case 'VOLUME':
         const p1 = (u1.messageCount / data.totalMessages) * 100;
         const p2 = (u2.messageCount / data.totalMessages) * 100;
         const w1 = animateReveal ? p1 : 50;
@@ -254,40 +407,28 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
           </div>
         );
 
-      /* 8. ONE SIDED DAYS */
-      case 7:
+      /* 10. SOLO CARRY */
+      case 'ONE_SIDED':
         const oneSidedUser = data.users.reduce((prev, curr) => (prev.oneSidedConversationsCount > curr.oneSidedConversationsCount) ? prev : curr);
-        const hasOneSided = oneSidedUser.oneSidedConversationsCount > 0;
-
         return (
           <div className="flex flex-col justify-center h-full px-6 text-center">
              <h2 className="text-2xl uppercase tracking-widest text-zinc-500 mb-12">Solo Carry</h2>
              
-             {hasOneSided ? (
-               <>
-                 <div className="bg-zinc-900 p-8 rounded-[2rem] border border-zinc-800 animate-fadeInUp">
-                   <div className="text-6xl mb-4">🎒</div>
-                   <div className="text-4xl font-black text-white mb-2">{oneSidedUser.name}</div>
-                   <div className="text-zinc-400 text-sm">Carried the chat on</div>
-                   <div className="mt-2 text-5xl font-black text-orange-500">{oneSidedUser.oneSidedConversationsCount}</div>
-                   <div className="text-xs text-zinc-600 uppercase tracking-widest mt-1">Days</div>
-                 </div>
-                 <p className="mt-8 text-zinc-500 text-sm px-8">
-                   (Days where they sent &gt;75% of messages)
-                 </p>
-               </>
-             ) : (
-               <div className="animate-fadeIn">
-                 <div className="text-6xl mb-6">⚖️</div>
-                 <h3 className="text-3xl font-bold text-white mb-4">Perfectly Balanced</h3>
-                 <p className="text-zinc-400">No one dominated the chat significantly on any specific day.</p>
-               </div>
-             )}
+             <div className="bg-zinc-900 p-8 rounded-[2rem] border border-zinc-800 animate-fadeInUp">
+               <div className="text-6xl mb-4">🎒</div>
+               <div className="text-4xl font-black text-white mb-2">{oneSidedUser.name}</div>
+               <div className="text-zinc-400 text-sm">Carried the chat on</div>
+               <div className="mt-2 text-5xl font-black text-orange-500">{oneSidedUser.oneSidedConversationsCount}</div>
+               <div className="text-xs text-zinc-600 uppercase tracking-widest mt-1">Days</div>
+             </div>
+             <p className="mt-8 text-zinc-500 text-sm px-8">
+               (Days where they sent &gt;75% of messages)
+             </p>
           </div>
         );
 
-      /* 9. LONGEST MESSAGE */
-      case 8:
+      /* 11. THE ESSAYIST */
+      case 'ESSAYIST':
         return (
           <div className="flex flex-col justify-center h-full px-6">
             <h2 className="text-2xl font-bold uppercase tracking-widest text-zinc-500 mb-8 text-center">The Essayist</h2>
@@ -307,7 +448,7 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
                <div className="mt-4 pt-4 border-t border-white/10 flex justify-between items-end">
                   <div>
                     <div className="text-4xl font-black text-white">{data.longestMessage.wordCount}</div>
-                    <div className="text-[10px] text-zinc-500 uppercase">Words</div>
+                    <div className="text--[10px] text-zinc-500 uppercase">Words</div>
                   </div>
                   <AlignLeft className="text-zinc-600" />
                </div>
@@ -319,8 +460,8 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
           </div>
         );
 
-      /* 10. TEXT VS EMOJI BALANCE */
-      case 9:
+      /* 12. EXPRESSIVE BALANCE */
+      case 'BALANCE':
         const totalU1 = u1.textMessageCount + u1.emojiMessageCount;
         const u1EmojiPct = totalU1 > 0 ? (u1.emojiMessageCount / totalU1) * 100 : 0;
         
@@ -361,8 +502,8 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
            </div>
         );
 
-      /* 11. MOST USED WORDS */
-      case 10:
+      /* 13. VOCABULARY */
+      case 'VOCAB':
         return (
           <div className="flex flex-col justify-center h-full px-6">
             <h2 className="text-3xl font-black mb-2 text-center text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-green-400">Signature Vocabulary</h2>
@@ -385,37 +526,33 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
           </div>
         );
 
-      /* 12. MOST REPEATED PHRASE */
-      case 11:
-        const phrase = data.mostRepeatedPhrase;
+      /* 14. REPEAT */
+      case 'REPEAT':
+        const phrase = data.mostRepeatedPhrase!;
         return (
           <div className="flex flex-col justify-center h-full px-6 text-center">
              <h2 className="text-2xl uppercase tracking-widest text-zinc-500 mb-2">On Repeat</h2>
              <p className="text-xs text-zinc-600 mb-8">Most frequently typed word sequence</p>
              
-             {phrase ? (
-               <div className="animate-scaleIn">
-                  <div className="text-6xl mb-6 opacity-30">❝</div>
-                  <div className="text-4xl font-black text-white leading-tight mb-8">
-                    {phrase.phrase}
-                  </div>
-                  <div className="inline-block bg-zinc-800 px-6 py-3 rounded-full mb-2">
-                    <span className="text-2xl font-bold text-green-400">{phrase.count}</span>
-                    <span className="text-sm text-zinc-400 ml-2 uppercase font-bold">Times</span>
-                  </div>
-                  <div className="text-zinc-500 text-sm mt-4">
-                     Mostly said by <span className="text-white font-bold">{phrase.topUser}</span>
-                  </div>
-                  <div className="text-6xl mt-6 opacity-30">❞</div>
-               </div>
-             ) : (
-               <p className="text-zinc-500">No specific repeated phrases found.</p>
-             )}
+             <div className="animate-scaleIn">
+                <div className="text-6xl mb-6 opacity-30">❝</div>
+                <div className="text-4xl font-black text-white leading-tight mb-8">
+                  {phrase.phrase}
+                </div>
+                <div className="inline-block bg-zinc-800 px-6 py-3 rounded-full mb-2">
+                  <span className="text-2xl font-bold text-green-400">{phrase.count}</span>
+                  <span className="text-sm text-zinc-400 ml-2 uppercase font-bold">Times</span>
+                </div>
+                <div className="text-zinc-500 text-sm mt-4">
+                   Mostly said by <span className="text-white font-bold">{phrase.topUser}</span>
+                </div>
+                <div className="text-6xl mt-6 opacity-30">❞</div>
+             </div>
           </div>
         );
 
-      /* 13. SILENCE BREAKER */
-      case 12:
+      /* 15. SILENCE BREAKER (THE PERSON) */
+      case 'SILENCE_BREAKER':
         return (
           <div className="flex flex-col justify-center h-full px-8 text-center">
              <MessageSquarePlus className="w-20 h-20 text-pink-500 mx-auto mb-8 animate-bounce" />
@@ -429,13 +566,13 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
 
              <div className="bg-zinc-900/50 p-4 rounded-xl border border-white/5 inline-block">
                 <div className="text-xs text-zinc-500 uppercase mb-1">Longest Silence Broken</div>
-                <div className="text-2xl font-bold text-white">{data.silenceBreaker.maxSilenceHours} hours</div>
+                <div className="text-2xl font-bold text-white">{formatDuration(data.silenceBreaker.maxSilenceHours)}</div>
              </div>
           </div>
         );
 
-      /* 14. LATE REPLIES */
-      case 13:
+      /* 16. SPEED CHECK */
+      case 'SPEED':
         const diffReply = u1.avgReplyTimeMinutes - u2.avgReplyTimeMinutes;
         const replyCaption = Math.abs(diffReply) < 2 
           ? "You both reply at the same speed!" 
@@ -464,14 +601,11 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
             <p className="text-center text-zinc-300 mt-12 italic font-medium px-4">
                "{replyCaption}"
             </p>
-            <p className="text-center text-[10px] text-zinc-600 mt-4">
-               *Calculated only when conversation is active (gaps &lt; 6 hours)
-            </p>
           </div>
         );
 
-      /* 15. PERSONALITY SPECTRUM */
-      case 14:
+      /* 17. STYLES */
+      case 'STYLES':
         const user1 = data.users[0];
         const user2 = data.users[1] || data.users[0]; 
 
@@ -497,10 +631,10 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
           </div>
         );
 
-      /* 16. FINAL CARD */
-      case 15:
+      /* 18. FINAL CARD */
+      case 'FINAL':
         return (
-          <div className="flex flex-col h-full pt-6 pb-12 px-6 overflow-y-auto scrollbar-hide">
+          <div className="flex flex-col h-full pt-6 pb-12 px-6 overflow-y-auto scrollbar-hide pointer-events-auto">
             <h2 className="text-center text-lg font-bold mb-4 animate-fadeIn text-zinc-400">
               The Receipt 🧾
             </h2>
@@ -529,7 +663,7 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
                   </div>
                   <div>
                     <div className="text-zinc-500 text-xs uppercase mb-1">Busiest Hour</div>
-                    <div className="text-xl font-bold text-cyan-400">{data.busiestHour}:00</div>
+                    <div className="text-xl font-bold text-cyan-400">{formatTime(data.busiestHour)}</div>
                   </div>
                   <div>
                     <div className="text-zinc-500 text-xs uppercase mb-1">Media Shared</div>
@@ -571,28 +705,42 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
 
       {/* Progress Bar */}
       <div className="absolute top-0 left-0 right-0 z-40 flex gap-1 p-2 pt-4 safe-top">
-        {Array.from({ length: TOTAL_SLIDES }).map((_, i) => (
+        {slides.map((_, i) => (
           <div key={i} className="h-1 flex-1 bg-zinc-800/50 rounded-full overflow-hidden">
-            <div className={`h-full bg-white transition-all duration-300 ${i < currentSlide ? 'w-full' : i === currentSlide ? 'w-full animate-progress' : 'w-0'}`} />
+            <div className={`h-full bg-white transition-all duration-300 ${i < currentSlideIndex ? 'w-full' : i === currentSlideIndex ? 'w-full animate-progress' : 'w-0'}`} />
           </div>
         ))}
       </div>
 
-      <div key={animKey} className="flex-1 relative z-10 max-w-md mx-auto w-full h-full">
-        {renderSlide()}
-      </div>
-
-      <div className="absolute inset-0 z-30 flex">
+      {/* Navigation Layer (Behind Content) */}
+      <div className="absolute inset-0 z-0 flex">
         <div className="w-[40%] h-full" onClick={() => handleSlideChange('prev')} />
         <div className="w-[60%] h-full" onClick={() => handleSlideChange('next')} />
       </div>
-      
-      {currentSlide > 0 && currentSlide < TOTAL_SLIDES - 1 && (
-         <div className="absolute bottom-6 left-0 right-0 flex justify-between px-6 pointer-events-none opacity-20 z-40">
-            <ChevronLeft />
-            <ChevronRight />
-         </div>
-      )}
+
+      {/* Content Layer (Top but transparent to clicks) */}
+      <div key={animKey} className="flex-1 relative z-10 max-w-md mx-auto w-full h-full pointer-events-none">
+        {renderSlide()}
+      </div>
+
+      {/* Navigation Controls (Visible on top, Interactive) */}
+      <div className="absolute bottom-6 left-0 right-0 flex justify-between px-6 z-40 pointer-events-none">
+        {currentSlideIndex > 0 ? (
+          <ChevronLeft 
+            className="text-white/50 hover:text-white cursor-pointer pointer-events-auto transition-colors" 
+            size={32}
+            onClick={(e) => { e.stopPropagation(); handleSlideChange('prev'); }}
+          />
+        ) : <div />}
+        
+        {currentSlideIndex < TOTAL_SLIDES - 1 ? (
+          <ChevronRight 
+             className="text-white/50 hover:text-white cursor-pointer pointer-events-auto transition-colors"
+             size={32}
+             onClick={(e) => { e.stopPropagation(); handleSlideChange('next'); }}
+          />
+        ) : <div />}
+      </div>
     </div>
   );
 };
