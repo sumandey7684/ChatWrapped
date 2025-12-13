@@ -26,6 +26,7 @@ export interface UserStat {
   emojiMessageCount: number; // Msgs with emojis
   shortMessageCount: number; // <= 3 words
   longMessageCount: number;  // >= 12 words
+  oneSidedConversationsCount: number; // Days where user sent >80% of msgs
 }
 
 export interface HourlyActivity {
@@ -58,9 +59,31 @@ export interface AnalysisResult {
   hourlyHeatmap: HourlyActivity[];
   yearOptions: number[];
   rapidFire: RapidFireStats;
-  // New Global Stats
-  dayNightSplit: { day: number; night: number }; // Day: 6am-6pm, Night: 6pm-6am
-  wordOccurrences: Record<string, Record<string, number>>; // word -> { UserA: 5, UserB: 2 }
+  // Global Stats
+  dayNightSplit: { day: number; night: number }; 
+  wordOccurrences: Record<string, Record<string, number>>;
+  
+  // New Offline Insights
+  dayOfWeekStats: number[]; // 0=Sun, 1=Mon...
+  longestMessage: {
+    content: string;
+    sender: string;
+    date: Date;
+    wordCount: number;
+  };
+  burstStats: {
+    count: number; // Number of bursts
+    maxBurst: number; // Max messages in a burst
+  };
+  mostRepeatedPhrase: {
+    phrase: string;
+    count: number;
+    topUser: string;
+  } | null;
+  silenceBreaker: {
+    name: string;
+    maxSilenceHours: number;
+  };
 }
 
 export interface ParseResult {

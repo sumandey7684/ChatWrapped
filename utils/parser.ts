@@ -12,7 +12,7 @@ const EMOJI_REGEX = /\p{Emoji_Presentation}/gu;
 
 // Common Stop Words to filter out
 const STOP_WORDS = new Set([
-  'the','be','to','of','and','a','in','that','have','i','it','for','not','on','with','he','as','you','do','at','this','but','his','by','from','they','we','say','her','she','or','an','will','my','one','all','would','there','their','what','so','up','out','if','about','who','get','which','go','me','when','make','can','like','time','no','just','him','know','take','people','into','year','your','good','some','could','them','see','other','than','then','now','look','only','come','its','over','think','also','back','after','use','two','how','our','work','first','well','way','even','new','want','because','any','these','give','day','most','us', 'is', 'are', 'was', 'were', 'has', 'had', 'been', 'ok', 'okay', 'lol', 'haha', 'yeah', 'yes', 'hey', 'hi', 'hello', 'omg', 'did', 'done', 'too', 'very', 'much', 'really', 'got', 'don', 'dont', 'didnt', 'can', 'cant', 'cannot', 'image', 'omitted', 'audio', 'video', 'gif', 'sticker'
+  'the','be','to','of','and','a','in','that','have','i','it','for','not','on','with','he','as','you','do','at','this','but','his','by','from','they','we','say','her','she','or','an','will','my','one','all','would','there','their','what','so','up','out','if','about','who','get','which','go','me','when','make','can','like','time','no','just','him','know','take','people','into','year','your','good','some','could','them','see','other','than','then','now','look','only','come','its','over','think','also','back','after','use','two','how','our','work','first','well','way','even','new','want','because','any','these','give','day','most','us', 'is', 'are', 'was', 'were', 'has', 'had', 'been', 'ok', 'okay', 'lol', 'haha', 'yeah', 'yes', 'hey', 'hi', 'hello', 'omg', 'did', 'done', 'too', 'very', 'much', 'really', 'got', 'don', 'dont', 'didnt', 'can', 'cant', 'cannot', 'image', 'omitted', 'audio', 'video', 'gif', 'sticker', 'pm', 'am'
 ]);
 
 // Extended Color Palette
@@ -105,7 +105,12 @@ export const analyzeMessages = (messages: Message[], yearFilter?: number): Analy
       yearOptions: [],
       rapidFire: { maxInMinute: 0, maxInHour: 0, maxInDay: 0 },
       dayNightSplit: { day: 0, night: 0 },
-      wordOccurrences: {}
+      wordOccurrences: {},
+      dayOfWeekStats: [0,0,0,0,0,0,0],
+      longestMessage: { content: '', sender: '', date: new Date(), wordCount: 0 },
+      burstStats: { count: 0, maxBurst: 0 },
+      mostRepeatedPhrase: null,
+      silenceBreaker: { name: '', maxSilenceHours: 0 }
     };
   }
 
@@ -123,20 +128,30 @@ export const analyzeMessages = (messages: Message[], yearFilter?: number): Analy
     emojiMsgCount: number;
     shortMessageCount: number;
     longMessageCount: number;
+    oneSidedCount: number;
   }>();
 
   const hourlyCounts = new Array(24).fill(0);
+  const dayOfWeekCounts = new Array(7).fill(0); // 0=Sun
   const msgsPerMinute = new Map<string, number>();
   const msgsPerHourSpecific = new Map<string, number>();
   const dailyTotalCounts = new Map<string, number>();
   const dailyBreakdown = new Map<string, Map<string, number>>();
   const startersMap = new Map<string, number>();
   const wordGlobalMap: Record<string, Record<string, number>> = {};
+  const phraseMap = new Map<string, { count: number; users: Map<string, number> }>();
   
+  // Stats vars
   let lastMsgTime = 0;
   let lastSender = '';
   let dayCount = 0;
   let nightCount = 0;
+  let maxSilenceTime = 0;
+  let currentBurst = 0;
+  let maxBurst = 0;
+  let burstCount = 0;
+
+  let longestMsg = { content: '', sender: '', date: new Date(0), wordCount: 0 };
 
   // Helpers
   const GM_REGEX = /\b(gm|good\s*morn|morning|mrng)\b/i;
@@ -149,16 +164,23 @@ export const analyzeMessages = (messages: Message[], yearFilter?: number): Analy
       userMap.set(msg.sender, { 
         count: 0, words: 0, emojis: new Map(), wordFreq: new Map(),
         replyTimes: [], morningCount: 0, nightCount: 0, byeCount: 0,
-        textOnlyCount: 0, emojiMsgCount: 0, shortMessageCount: 0, longMessageCount: 0
+        textOnlyCount: 0, emojiMsgCount: 0, shortMessageCount: 0, longMessageCount: 0,
+        oneSidedCount: 0
       });
     }
     const uStat = userMap.get(msg.sender)!;
-    
+    const msgTime = msg.date.getTime();
+
     // Basic Stats
     uStat.count++;
     const tokens = msg.content.trim().split(/\s+/);
     const wordCount = tokens.length;
     uStat.words += wordCount;
+
+    // Longest Message
+    if (wordCount > longestMsg.wordCount) {
+      longestMsg = { content: msg.content, sender: msg.sender, date: msg.date, wordCount };
+    }
 
     // Length Classification
     if (wordCount <= 3) uStat.shortMessageCount++;
@@ -173,27 +195,60 @@ export const analyzeMessages = (messages: Message[], yearFilter?: number): Analy
       uStat.textOnlyCount++;
     }
 
-    // Word Analysis (for Word Cloud & Search)
-    const cleanContent = msg.content.toLowerCase().replace(/[^\w\s]/g, '');
-    const words = cleanContent.split(/\s+/);
+    // Word & Phrase Analysis
+    const cleanContent = msg.content.toLowerCase().replace(/[^\w\s']/g, ''); // keep apostrophes
+    const words = cleanContent.split(/\s+/).filter(w => w.length > 0);
+    
+    // Words
     words.forEach(w => {
-      if (w.length > 2 && !STOP_WORDS.has(w)) {
-        // Per User
-        uStat.wordFreq.set(w, (uStat.wordFreq.get(w) || 0) + 1);
-        // Global Map for Search
-        if (!wordGlobalMap[w]) wordGlobalMap[w] = {};
-        wordGlobalMap[w][msg.sender] = (wordGlobalMap[w][msg.sender] || 0) + 1;
+      const cleanW = w.replace(/[']/g, '');
+      if (cleanW.length > 2 && !STOP_WORDS.has(cleanW)) {
+        uStat.wordFreq.set(cleanW, (uStat.wordFreq.get(cleanW) || 0) + 1);
+        if (!wordGlobalMap[cleanW]) wordGlobalMap[cleanW] = {};
+        wordGlobalMap[cleanW][msg.sender] = (wordGlobalMap[cleanW][msg.sender] || 0) + 1;
       }
     });
+
+    // Bigram Phrases (2 words)
+    // Only analyze if message is relatively short to avoid noise, or analyze all?
+    // Let's analyze all but filter for stop words.
+    for (let i = 0; i < words.length - 1; i++) {
+        const w1 = words[i];
+        const w2 = words[i+1];
+        // At least one word must NOT be a stop word to be interesting
+        if (!STOP_WORDS.has(w1) || !STOP_WORDS.has(w2)) {
+            const phrase = `${w1} ${w2}`;
+            if (!phraseMap.has(phrase)) {
+                phraseMap.set(phrase, { count: 0, users: new Map() });
+            }
+            const pEntry = phraseMap.get(phrase)!;
+            pEntry.count++;
+            pEntry.users.set(msg.sender, (pEntry.users.get(msg.sender) || 0) + 1);
+        }
+    }
 
     // Specific Phrase Detection
     if (GM_REGEX.test(msg.content)) uStat.morningCount++;
     if (GN_REGEX.test(msg.content)) uStat.nightCount++;
     if (BYE_REGEX.test(msg.content)) uStat.byeCount++;
 
+    // Burst Detection
+    if (index > 0) {
+        const timeDiff = msgTime - lastMsgTime;
+        if (timeDiff < 60000) { // < 1 minute
+            currentBurst++;
+        } else {
+            if (currentBurst > 5) {
+                burstCount++;
+                if (currentBurst > maxBurst) maxBurst = currentBurst;
+            }
+            currentBurst = 1;
+        }
+    } else {
+        currentBurst = 1;
+    }
+
     // Reply Time Logic
-    // If sender changed and time diff is < 6 hours (assume active convo)
-    const msgTime = msg.date.getTime();
     if (lastSender && lastSender !== msg.sender) {
       const diffMinutes = (msgTime - lastMsgTime) / (1000 * 60);
       if (diffMinutes < 360) { // Only count replies within 6 hours
@@ -201,14 +256,20 @@ export const analyzeMessages = (messages: Message[], yearFilter?: number): Analy
       }
     }
 
-    // Initiator Logic (Gap > 6 hours)
+    // Initiator / Silence Breaker Logic (Gap > 6 hours)
     if (index === 0 || (msgTime - lastMsgTime > 6 * 60 * 60 * 1000)) {
       startersMap.set(msg.sender, (startersMap.get(msg.sender) || 0) + 1);
+      
+      if (index > 0) {
+          const silenceHours = (msgTime - lastMsgTime) / (1000 * 60 * 60);
+          if (silenceHours > maxSilenceTime) maxSilenceTime = silenceHours;
+      }
     }
 
     // Time Stats
     const hour = msg.date.getHours();
     hourlyCounts[hour]++;
+    dayOfWeekCounts[msg.date.getDay()]++;
     if (hour >= 6 && hour < 18) dayCount++; else nightCount++;
 
     const isoString = msg.date.toISOString();
@@ -226,6 +287,35 @@ export const analyzeMessages = (messages: Message[], yearFilter?: number): Analy
     lastMsgTime = msgTime;
     lastSender = msg.sender;
   });
+
+  // Calculate One-Sided Days
+  dailyBreakdown.forEach((userCounts, date) => {
+    const totalDay = Array.from(userCounts.values()).reduce((a, b) => a + b, 0);
+    if (totalDay > 10) { // Threshold for significance
+      userCounts.forEach((count, user) => {
+        if ((count / totalDay) > 0.75) {
+          if (userMap.has(user)) {
+            userMap.get(user)!.oneSidedCount++;
+          }
+        }
+      });
+    }
+  });
+
+  // Find Top Phrase
+  let topPhrase = null;
+  let maxPhraseCount = 0;
+  phraseMap.forEach((data, phrase) => {
+      if (data.count > maxPhraseCount && data.count > 3) { // Threshold
+          let topUser = '';
+          let maxUserCount = 0;
+          data.users.forEach((c, u) => { if(c > maxUserCount) { maxUserCount = c; topUser = u; }});
+          
+          maxPhraseCount = data.count;
+          topPhrase = { phrase, count: data.count, topUser };
+      }
+  });
+
 
   // Calculate Maxima
   let maxDaily = 0;
@@ -269,7 +359,8 @@ export const analyzeMessages = (messages: Message[], yearFilter?: number): Analy
       textMessageCount: stats.textOnlyCount,
       emojiMessageCount: stats.emojiMsgCount,
       shortMessageCount: stats.shortMessageCount,
-      longMessageCount: stats.longMessageCount
+      longMessageCount: stats.longMessageCount,
+      oneSidedConversationsCount: stats.oneSidedCount
     };
   });
 
@@ -304,6 +395,11 @@ export const analyzeMessages = (messages: Message[], yearFilter?: number): Analy
     yearOptions: Array.from(years).sort().reverse(),
     rapidFire: { maxInMinute, maxInHour, maxInDay: maxDaily },
     dayNightSplit: { day: dayCount, night: nightCount },
-    wordOccurrences: wordGlobalMap
+    wordOccurrences: wordGlobalMap,
+    dayOfWeekStats: dayOfWeekCounts,
+    longestMessage: longestMsg,
+    burstStats: { count: burstCount, maxBurst },
+    mostRepeatedPhrase: topPhrase,
+    silenceBreaker: { name: topStarter, maxSilenceHours: Math.round(maxSilenceTime) }
   };
 };

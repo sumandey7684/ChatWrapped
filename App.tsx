@@ -126,7 +126,7 @@ function App() {
                     </div>
                     <div className="text-white font-bold mb-2">1. Export Chat</div>
                     <p className="text-zinc-400 text-sm leading-relaxed">
-                      Open WhatsApp Chat &gt; Tap Name/Menu &gt; Export Chat &gt; Select <strong className="text-zinc-300">"Without Media"</strong>.
+                      Open any chat &gt; Tap three dots on top &gt; Export chat &gt; Select <strong className="text-zinc-300">"Without Media"</strong>.
                     </p>
                   </div>
 
