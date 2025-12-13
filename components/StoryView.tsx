@@ -6,7 +6,7 @@ import HourlyHeatmap from './charts/HourlyHeatmap';
 import { 
   MessageSquarePlus, Camera, ChevronRight, ChevronLeft, 
   Search, Zap, Moon, Sun, MessageCircle, AlignLeft, Image,
-  Flame, TrendingUp, PauseCircle, Clock, BarChart3
+  Flame, PauseCircle, Clock, BarChart3
 } from 'lucide-react';
 
 interface StoryViewProps {
