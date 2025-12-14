@@ -85,6 +85,7 @@ export interface AnalysisResult {
     name: string;
     maxSilenceHours: number;
   };
+  silenceBreakCounts: Record<string, number>;
 }
 
 export interface ParseResult {

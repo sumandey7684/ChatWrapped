@@ -12,7 +12,7 @@ const EMOJI_REGEX = /\p{Emoji_Presentation}/gu;
 
 // Common Stop Words to filter out
 const STOP_WORDS = new Set([
-  'the','be','to','of','and','a','in','that','have','i','it','for','not','on','with','he','as','you','do','at','this','but','his','by','from','they','we','say','her','she','or','an','will','my','one','all','would','there','their','what','so','up','out','if','about','who','get','which','go','me','when','make','can','like','time','no','just','him','know','take','people','into','year','your','good','some','could','them','see','other','than','then','now','look','only','come','its','over','think','also','back','after','use','two','how','our','work','first','well','way','even','new','want','because','any','these','give','day','most','us', 'is', 'are', 'was', 'were', 'has', 'had', 'been', 'ok', 'okay', 'lol', 'haha', 'yeah', 'yes', 'hey', 'hi', 'hello', 'omg', 'did', 'done', 'too', 'very', 'much', 'really', 'got', 'don', 'dont', 'didnt', 'can', 'cant', 'cannot', 'pm', 'am', 'omitted'
+  'the','be','to','of','and','a','in','that','have','i','it','for','not','on','with','he','as','you','do','at','this','but','his','by','from','they','we','say','her','she','or','an','will','my','one','all','would','there','their','what','so','up','out','if','about','who','get','which','go','me','when','make','can','like','time','no','just','him','know','take','people','into','year','your','good','some','could','them','see','other','than','then','now','look','only','come','its','over','think','also','back','after','use','two','how','our','work','first','well','way','even','new','want','because','any','these','give','day','most','us', 'is', 'are', 'was', 'were', 'has', 'had', 'been', 'ok', 'okay', 'lol', 'haha', 'haha', 'yeah', 'yes', 'hey', 'hi', 'hello', 'omg', 'did', 'done', 'too', 'very', 'much', 'really', 'got', 'don', 'dont', 'didnt', 'can', 'cant', 'cannot', 'pm', 'am', 'omitted'
 ]);
 
 // Media phrases to detect and filter
@@ -117,7 +117,8 @@ export const analyzeMessages = (messages: Message[], yearFilter?: number): Analy
       longestMessage: { content: '', sender: '', date: new Date(), wordCount: 0 },
       burstStats: { count: 0, maxBurst: 0 },
       mostRepeatedPhrase: null,
-      silenceBreaker: { name: '', maxSilenceHours: 0 }
+      silenceBreaker: { name: '', maxSilenceHours: 0 },
+      silenceBreakCounts: {}
     };
   }
 
@@ -421,6 +422,7 @@ export const analyzeMessages = (messages: Message[], yearFilter?: number): Analy
     longestMessage: longestMsg,
     burstStats: { count: burstCount, maxBurst },
     mostRepeatedPhrase: topPhrase,
-    silenceBreaker: { name: topStarter, maxSilenceHours: Math.round(maxSilenceTime) }
+    silenceBreaker: { name: topStarter, maxSilenceHours: Math.round(maxSilenceTime) },
+    silenceBreakCounts: Object.fromEntries(startersMap)
   };
 };
