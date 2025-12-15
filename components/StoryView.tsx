@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { AnalysisResult } from '../types';
+import { AnalysisResult, UserStat } from '../types';
 import WordSearch from './WordSearch';
 import HourlyHeatmap from './charts/HourlyHeatmap';
 import { 
@@ -17,7 +17,7 @@ interface StoryViewProps {
 }
 
 type SlideType = 
-  | 'INTRO' | 'TOTAL' | 'GROUP_LEADERBOARD' | 'STREAKS' | 'SILENCE_DURATION' | 'SILENCE_LEADERBOARD' | 'ACTIVE_GRAPH'
+  | 'INTRO' | 'TOTAL' | 'GROUP_LEADERBOARD' | 'MOST_SILENT' | 'STREAKS' | 'SILENCE_DURATION' | 'SILENCE_LEADERBOARD' | 'ACTIVE_GRAPH'
   | 'PEAK_HOUR' | 'WEEKLY' | 'MEDIA' | 'RAPID_FIRE' | 'VOLUME'
   | 'ONE_SIDED' | 'ESSAYIST' | 'BALANCE' | 'VOCAB' | 'REPEAT'
   | 'SILENCE_BREAKER' | 'SPEED' | 'STYLES' | 'FINAL';
@@ -365,7 +365,22 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
 
   const slides: SlideType[] = useMemo(() => {
     const list: SlideType[] = ['INTRO', 'TOTAL'];
-    if (data.users.length > 2) list.push('GROUP_LEADERBOARD');
+    if (data.users.length > 2) {
+      list.push('GROUP_LEADERBOARD');
+      
+      // MOST SILENT AWARD Logic
+      const activeUsers = data.users.filter(u => u.messageCount > 0);
+      if (activeUsers.length > 1) {
+          const counts = activeUsers.map(u => u.messageCount);
+          const minCount = Math.min(...counts);
+          const maxCount = Math.max(...counts);
+          // Only show if there is some variation (not everyone tied)
+          if (minCount !== maxCount) {
+             list.push('MOST_SILENT');
+          }
+      }
+    }
+
     if (data.longestStreak >= 2) list.push('STREAKS');
     if (data.silenceBreaker.maxSilenceHours > 1) {
       list.push('SILENCE_DURATION');
@@ -390,8 +405,30 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
   const TOTAL_SLIDES = slides.length;
   const currentSlideType = slides[currentSlideIndex];
   const isGroup = data.users.length > 2;
-  const u1 = data.users[0] || { name: '?', color: '#ccc' };
-  const u2 = data.users[1] || { name: '?', color: '#ccc' };
+
+  // Fix: Providing a complete fallback object to avoid missing property errors
+  const defaultUser: UserStat = {
+    name: '?',
+    messageCount: 0,
+    wordCount: 0,
+    avgLength: 0,
+    emojis: [],
+    color: '#ccc',
+    topWords: [],
+    avgReplyTimeMinutes: 0,
+    morningCount: 0,
+    nightCount: 0,
+    byeCount: 0,
+    textMessageCount: 0,
+    emojiMessageCount: 0,
+    mediaMessageCount: 0,
+    shortMessageCount: 0,
+    longMessageCount: 0,
+    oneSidedConversationsCount: 0
+  };
+
+  const u1 = data.users[0] || defaultUser;
+  const u2 = data.users[1] || defaultUser;
 
   const handleSlideChange = (direction: 'next' | 'prev') => {
     if (direction === 'next' && currentSlideIndex < TOTAL_SLIDES - 1) {
@@ -408,6 +445,7 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
       case 'INTRO': return 'purple';
       case 'TOTAL': return 'purple';
       case 'GROUP_LEADERBOARD': return 'purple';
+      case 'MOST_SILENT': return 'dark';
       case 'STREAKS': return 'orange';
       case 'SILENCE_DURATION': return 'dark';
       case 'SILENCE_LEADERBOARD': return 'blue';
@@ -443,6 +481,7 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
       case 'INTRO': return ['👋'];
       case 'TOTAL': return ['💬'];
       case 'GROUP_LEADERBOARD': return ['👥', '🏆'];
+      case 'MOST_SILENT': return ['🤫'];
       case 'STREAKS': return ['🔥'];
       case 'SILENCE_DURATION': return ['😴', '💤'];
       case 'SILENCE_LEADERBOARD': return ['📢'];
@@ -594,6 +633,38 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
                   </div>
                 )}
              </div>
+          </SlideWrapper>
+        );
+
+      case 'MOST_SILENT':
+        const activeUsersSilent = data.users.filter(u => u.messageCount > 0);
+        const sortedBySilence = [...activeUsersSilent].sort((a, b) => a.messageCount - b.messageCount);
+        const silentUser = sortedBySilence[0];
+
+        return (
+          <SlideWrapper className="text-center">
+             <div className="flex justify-center mb-8 animate-fadeSlideUp relative z-10">
+                  <div className="p-6 bg-zinc-800/50 rounded-full border border-zinc-700 shadow-[0_0_40px_rgba(0,0,0,0.3)]">
+                     <span className="text-6xl">🤫</span>
+                  </div>
+             </div>
+             <div className="inline-block border border-zinc-700 bg-zinc-800/50 rounded-full px-4 py-1 text-zinc-400 uppercase text-[10px] font-bold tracking-widest mb-6 animate-fadeSlideUp opacity-0 fill-mode-forwards" style={{ animationDelay: '100ms' }}>
+                Most Silent Person Award
+             </div>
+             <RevealText className="mb-2" delay="200ms">
+                 <h2 className="text-4xl font-black text-white">
+                    {silentUser.name}
+                 </h2>
+             </RevealText>
+             <p className="text-zinc-400 text-lg mb-8 animate-fadeSlideUp opacity-0 fill-mode-forwards" style={{ animationDelay: '300ms' }}>
+                 Sent <span className="font-bold text-white">{silentUser.messageCount}</span> messages
+             </p>
+
+             <div className="glass-panel p-4 rounded-xl animate-fadeSlideUp opacity-0 fill-mode-forwards mx-auto max-w-xs" style={{ animationDelay: '400ms' }}>
+                 <p className="text-zinc-300 italic">"Quiet, but present."</p>
+             </div>
+
+             <MicroExplanation text="Among members who participated at least once." delay="600ms" />
           </SlideWrapper>
         );
 
