@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Upload, FileWarning, FileArchive } from 'lucide-react';
+import { Upload, FileWarning } from 'lucide-react';
 
 interface FileUploadProps {
   onFileUpload: (file: File) => void;

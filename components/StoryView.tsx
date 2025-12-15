@@ -41,7 +41,7 @@ const MessageRain: React.FC = () => {
   if (reduced) return null;
   
   // Use a fixed set of drops based on component mount to avoid rapid re-renders
-  const drops = useMemo(() => Array.from({ length: 12 }).map((_, i) => ({
+  const drops = useMemo(() => Array.from({ length: 12 }).map(() => ({
     left: `${Math.floor(Math.random() * 90) + 5}%`,
     delay: `${Math.random() * 5}s`,
     duration: `${10 + Math.random() * 5}s`, // Slow speed (8-15s)
@@ -73,7 +73,7 @@ const HeatBurst: React.FC = () => {
   const reduced = useReducedMotion();
   if (reduced) return null;
   
-  const particles = useMemo(() => Array.from({ length: 8 }).map((_, i) => ({
+  const particles = useMemo(() => Array.from({ length: 8 }).map(() => ({
     left: `${20 + Math.random() * 60}%`,
     delay: `${0.5 + Math.random() * 1.5}s`, // Starts after 500ms
     duration: `${2 + Math.random()}s`,
@@ -114,7 +114,7 @@ const FloatingParticles: React.FC = () => {
   const reduced = useReducedMotion();
   if (reduced) return null;
   
-  const particles = useMemo(() => Array.from({ length: 6 }).map((_, i) => ({
+  const particles = useMemo(() => Array.from({ length: 6 }).map(() => ({
     left: `${Math.random() * 80 + 10}%`,
     top: `${Math.random() * 60 + 20}%`,
     delay: `${Math.random() * 2}s`,

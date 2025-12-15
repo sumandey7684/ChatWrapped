@@ -244,7 +244,6 @@ function App() {
         <StoryView 
           data={analyticsData} 
           selectedYear={selectedYear} 
-          onYearChange={setSelectedYear}
           onReset={handleReset}
           onCompare={() => setViewState('compare')}
           canCompare={canCompare}
