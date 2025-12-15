@@ -214,9 +214,9 @@ function App() {
                     <div className="w-10 h-10 bg-zinc-800/80 rounded-full flex items-center justify-center mb-4 text-pink-400 group-hover:scale-110 transition-transform">
                       <FolderOpen size={18} />
                     </div>
-                    <div className="text-white font-bold text-sm mb-1">2. Unzip File</div>
+                    <div className="text-white font-bold text-sm mb-1">2. Save File</div>
                     <p className="text-zinc-500 text-xs leading-relaxed">
-                      If you get a <strong>.zip</strong>, extract it to find the <span className="text-zinc-300">_chat.txt</span> file.
+                      Save the file to your device. No need to unzip it.
                     </p>
                   </div>
 
@@ -227,7 +227,7 @@ function App() {
                     </div>
                     <div className="text-white font-bold text-sm mb-1">3. Drop & View</div>
                     <p className="text-zinc-500 text-xs leading-relaxed">
-                      Upload the text file above to generate your story instantly.
+                      Upload the file above to generate your story instantly.
                     </p>
                   </div>
                </div>
@@ -244,6 +244,7 @@ function App() {
         <StoryView 
           data={analyticsData} 
           selectedYear={selectedYear} 
+          onYearChange={setSelectedYear}
           onReset={handleReset}
           onCompare={() => setViewState('compare')}
           canCompare={canCompare}

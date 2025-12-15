@@ -91,14 +91,6 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, isLoading, status
               Your story starts instantly. Nothing is uploaded.
             </p>
           </div>
-
-          {!isLoading && (
-            <div className="flex items-center gap-2 text-xs text-zinc-600 mt-2 max-w-xs mx-auto justify-center">
-               <span className="font-mono text-zinc-400 bg-zinc-800 px-1.5 py-0.5 rounded">.txt</span>
-               <span>or</span>
-               <span className="font-mono text-zinc-400 bg-zinc-800 px-1.5 py-0.5 rounded flex items-center gap-1"><FileArchive size={10}/> .zip</span>
-            </div>
-          )}
         </div>
       </div>
 

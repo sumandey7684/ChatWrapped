@@ -38,7 +38,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ messages, baseYear, onC
   const targetData = useMemo(() => targetYear ? analyzeMessages(messages, targetYear) : null, [messages, targetYear]);
 
   const nextSlide = () => {
-    if (currentSlide < 5) { // 5 slides total
+    if (currentSlide < 4) { // Max slide index is 4
       setCurrentSlide(c => c + 1);
       setAnimKey(k => k + 1);
     }
@@ -238,7 +238,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ messages, baseYear, onC
       // 5. SUMMARY
       case 4:
         return (
-          <div className="flex flex-col h-full pt-8 pb-12 px-6 overflow-y-auto scrollbar-hide">
+          <div className="flex flex-col h-full pt-8 pb-12 px-6 overflow-y-auto scrollbar-hide pointer-events-auto">
             <h2 className="text-center text-lg font-bold mb-6 animate-fadeSlideUp text-zinc-400">Comparison Wrapped</h2>
             
             {/* Capture Target */}
@@ -277,7 +277,7 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ messages, baseYear, onC
             </div>
 
             <div className="mt-8 flex flex-col gap-3 max-w-sm mx-auto w-full animate-fadeInUp delay-500 opacity-0 fill-mode-forwards relative z-50">
-               <button onClick={() => { setTargetYear(null); setCurrentSlide(0); }} className="bg-zinc-800 text-white py-4 rounded-full font-bold flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all shadow-lg">
+               <button onClick={() => { setTargetYear(null); setCurrentSlide(0); }} className="bg-zinc-800 text-white py-4 rounded-full font-bold flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all shadow-lg cursor-pointer">
                  <RefreshCcw size={20} /> Compare Another Year
                </button>
                
@@ -302,13 +302,15 @@ const ComparisonView: React.FC<ComparisonViewProps> = ({ messages, baseYear, onC
         ))}
       </div>
 
-      <div key={animKey} className="flex-1 relative z-10 max-w-md mx-auto w-full h-full">
-         {renderComparisonSlide()}
-      </div>
-
-      <div className="absolute inset-0 z-40 flex">
+      {/* Navigation Layer (Z-20) */}
+      <div className="absolute inset-0 z-20 flex">
         <div className="w-1/3 h-full" onClick={prevSlide}></div>
         <div className="w-2/3 h-full" onClick={nextSlide}></div>
+      </div>
+
+      {/* Content Layer (Z-30, pointer-events-none by default so nav works, re-enabled in specific slides) */}
+      <div key={animKey} className="flex-1 relative z-30 max-w-md mx-auto w-full h-full pointer-events-none">
+         {renderComparisonSlide()}
       </div>
 
       <div className="absolute bottom-6 left-0 right-0 flex justify-between px-6 pointer-events-none opacity-20 z-50">

@@ -58,6 +58,44 @@
         90% { transform: translate(10%, 5%); }
       }
 
+      /* Micro-Motion: Message Rain (Slower, subtle) */
+      @keyframes rainFall {
+        0% { transform: translateY(-20%); opacity: 0; }
+        20% { opacity: 0.06; }
+        90% { opacity: 0.06; }
+        100% { transform: translateY(120%); opacity: 0; }
+      }
+
+      /* Micro-Motion: Heat Rise (Scale down to fade) */
+      @keyframes heatRise {
+        0% { transform: translateY(100%) scale(1.2); opacity: 0; }
+        20% { opacity: 0.08; }
+        100% { transform: translateY(-20vh) scale(0.6); opacity: 0; }
+      }
+
+      /* Micro-Motion: Pulse Wave */
+      @keyframes pulseWaveHorizontal {
+        0% { transform: translateX(-100%) skewX(-20deg); opacity: 0; }
+        20% { opacity: 0.15; }
+        80% { opacity: 0.15; }
+        100% { transform: translateX(100%) skewX(-20deg); opacity: 0; }
+      }
+
+      /* Micro-Motion: Float Drift */
+      @keyframes floatDrift {
+        0% { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0; }
+        30% { opacity: 0.08; }
+        100% { transform: translateY(-30vh) translateX(20px) rotate(10deg); opacity: 0; }
+      }
+
+      /* Micro-Motion: Emoji Drop (Very Slow) */
+      @keyframes emojiDrop {
+        0% { transform: translateY(-10vh) rotate(0deg); opacity: 0; }
+        10% { opacity: 0.05; } /* Max 5% opacity */
+        90% { opacity: 0.05; }
+        100% { transform: translateY(110vh) rotate(15deg); opacity: 0; }
+      }
+
       /* Missing Animations Restore */
       @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
       @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
@@ -84,6 +122,13 @@
       .animate-blob-slow { animation: slowDrift 20s infinite alternate ease-in-out; }
       .animate-blob-slower { animation: slowDrift 30s infinite alternate-reverse ease-in-out; }
       .animate-breathe { animation: slowBreathe 8s infinite ease-in-out; }
+
+      /* Micro-Motion Classes */
+      .animate-rain { animation: rainFall linear infinite; }
+      .animate-heat { animation: heatRise ease-out forwards; }
+      .animate-wave { animation: pulseWaveHorizontal 2.5s ease-in-out forwards; }
+      .animate-float { animation: floatDrift linear infinite; }
+      .animate-emoji-drop { animation: emojiDrop linear infinite; }
 
       /* Standard Animation Utilities */
       .animate-fadeIn { animation: fadeIn 0.8s ease-out forwards; }

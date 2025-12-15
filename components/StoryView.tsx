@@ -22,6 +22,160 @@ type SlideType =
   | 'ONE_SIDED' | 'ESSAYIST' | 'BALANCE' | 'VOCAB' | 'REPEAT'
   | 'SILENCE_BREAKER' | 'SPEED' | 'STYLES' | 'FINAL';
 
+// --- MICRO-MOTION COMPONENTS ---
+
+const useReducedMotion = () => {
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setPrefersReducedMotion(mediaQuery.matches);
+    const handler = (event: MediaQueryListEvent) => setPrefersReducedMotion(event.matches);
+    mediaQuery.addEventListener('change', handler);
+    return () => mediaQuery.removeEventListener('change', handler);
+  }, []);
+  return prefersReducedMotion;
+};
+
+const MessageRain: React.FC = () => {
+  const reduced = useReducedMotion();
+  if (reduced) return null;
+  
+  // Use a fixed set of drops based on component mount to avoid rapid re-renders
+  const drops = useMemo(() => Array.from({ length: 12 }).map((_, i) => ({
+    left: `${Math.floor(Math.random() * 90) + 5}%`,
+    delay: `${Math.random() * 5}s`,
+    duration: `${10 + Math.random() * 5}s`, // Slow speed (8-15s)
+    opacity: 0.04 + Math.random() * 0.04 // 4% to 8% opacity
+  })), []);
+
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+      {drops.map((d, i) => (
+        <div 
+          key={i}
+          className="absolute top-0 text-white animate-rain"
+          style={{
+            left: d.left,
+            animationDelay: d.delay,
+            animationDuration: d.duration,
+            opacity: d.opacity
+          }}
+        >
+          {/* Small message bubble shape */}
+          <div className="w-2 h-2 bg-current rounded-full rounded-bl-none" />
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const HeatBurst: React.FC = () => {
+  const reduced = useReducedMotion();
+  if (reduced) return null;
+  
+  const particles = useMemo(() => Array.from({ length: 8 }).map((_, i) => ({
+    left: `${20 + Math.random() * 60}%`,
+    delay: `${0.5 + Math.random() * 1.5}s`, // Starts after 500ms
+    duration: `${2 + Math.random()}s`,
+    size: `${Math.random() * 40 + 20}px`
+  })), []);
+
+  return (
+    <div className="absolute bottom-0 left-0 right-0 h-1/2 pointer-events-none overflow-hidden z-0">
+      {particles.map((p, i) => (
+        <div 
+          key={i}
+          className="absolute bottom-0 bg-orange-500 blur-[20px] rounded-full animate-heat"
+          style={{
+            left: p.left,
+            width: p.size,
+            height: p.size,
+            animationDelay: p.delay,
+            animationDuration: p.duration
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
+const PulseWave: React.FC = () => {
+  const reduced = useReducedMotion();
+  if (reduced) return null;
+
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+      <div className="absolute top-1/2 left-0 w-full h-32 -translate-y-1/2 bg-gradient-to-r from-transparent via-orange-500/10 to-transparent skew-x-12 animate-wave" />
+    </div>
+  );
+};
+
+const FloatingParticles: React.FC = () => {
+  const reduced = useReducedMotion();
+  if (reduced) return null;
+  
+  const particles = useMemo(() => Array.from({ length: 6 }).map((_, i) => ({
+    left: `${Math.random() * 80 + 10}%`,
+    top: `${Math.random() * 60 + 20}%`,
+    delay: `${Math.random() * 2}s`,
+    duration: `${6 + Math.random() * 4}s`,
+  })), []);
+
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+      {particles.map((p, i) => (
+        <div 
+          key={i}
+          className="absolute text-indigo-300 font-bold text-xs animate-float opacity-0"
+          style={{
+            left: p.left,
+            top: p.top,
+            animationDelay: p.delay,
+            animationDuration: p.duration
+          }}
+        >
+          {i % 2 === 0 ? 'z' : '•'}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const BackgroundEmojis: React.FC<{ emojis: string[] }> = ({ emojis }) => {
+  const reduced = useReducedMotion();
+  if (reduced || !emojis || emojis.length === 0) return null;
+
+  // Static set of drops
+  const drops = useMemo(() => Array.from({ length: 12 }).map((_, i) => ({
+    left: `${Math.floor(Math.random() * 90) + 5}%`,
+    delay: `${Math.random() * 20}s`, // Long delay for staggering
+    duration: `${15 + Math.random() * 10}s`, // 15-25s slow fall
+    emoji: emojis[i % emojis.length],
+    fontSize: `${3 + Math.random() * 3}rem`, // varied sizes 3rem - 6rem
+    blur: Math.random() > 0.4 ? '3px' : '1px'
+  })), [emojis]);
+
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+      {drops.map((d, i) => (
+        <div
+          key={i}
+          className="absolute -top-32 animate-emoji-drop opacity-0"
+          style={{
+            left: d.left,
+            animationDelay: d.delay,
+            animationDuration: d.duration,
+            fontSize: d.fontSize,
+            filter: `blur(${d.blur}) grayscale(0.5)`, // Subtle appearance
+          }}
+        >
+          {d.emoji}
+        </div>
+      ))}
+    </div>
+  );
+};
+
 // --- INTERNAL COMPONENTS ---
 
 const CountUp: React.FC<{ end: number; duration?: number; suffix?: string; className?: string; delay?: number }> = ({ end, duration = 1500, suffix = '', className = '', delay = 0 }) => {
@@ -61,7 +215,7 @@ const CountUp: React.FC<{ end: number; duration?: number; suffix?: string; class
 };
 
 const RevealText: React.FC<{ children: React.ReactNode; className?: string; delay?: string }> = ({ children, className = '', delay = '0ms' }) => (
-  <div className={`overflow-visible ${className}`}> {/* changed overflow-hidden to visible to allow glows to spill */}
+  <div className={`overflow-visible ${className}`}>
     <div className="animate-fadeSlideUp opacity-0 fill-mode-forwards" style={{ animationDelay: delay }}>
       {children}
     </div>
@@ -75,7 +229,19 @@ const GlowNumber: React.FC<{ children: React.ReactNode; color?: string; classNam
   </div>
 );
 
-const LivingBackground: React.FC<{ theme: string }> = ({ theme }) => {
+const MicroExplanation: React.FC<{ text: string; delay?: string; className?: string }> = ({ text, delay = '600ms', className = '' }) => (
+  <div className={`mt-4 w-full text-center animate-fadeSlideUp opacity-0 fill-mode-forwards pointer-events-none ${className}`} style={{ animationDelay: delay }}>
+    <p className="text-xs text-zinc-500/80 font-medium tracking-wide">
+      {text}
+    </p>
+  </div>
+);
+
+const LivingBackground: React.FC<{ 
+  theme: string; 
+  mode?: 'rain' | 'heat' | 'pulse' | 'float' | 'none';
+  emojis?: string[];
+}> = ({ theme, mode = 'none', emojis }) => {
   // Using brighter, richer colors that fade into the dark background
   const themeStyles = useMemo(() => {
     switch (theme) {
@@ -136,18 +302,24 @@ const LivingBackground: React.FC<{ theme: string }> = ({ theme }) => {
        <div className="bg-noise" />
        
        {/* Layer 2: Abstract Shapes (Blobs) */}
-       {/* Using mix-blend-screen/overlay to prevent "flat sticker" look. They act like light. */}
        <div className={`absolute top-[-10%] left-[-20%] w-[90vw] h-[90vw] rounded-full mix-blend-screen opacity-20 blur-[100px] animate-blob-slow ${themeStyles.blob1}`} />
-       
        <div 
          className={`absolute top-[40%] right-[-20%] w-[80vw] h-[80vw] rounded-full mix-blend-screen opacity-20 blur-[120px] animate-blob-slower ${themeStyles.blob2}`} 
          style={{ animationDelay: '-5s' }} 
        />
-       
        <div 
          className={`absolute bottom-[-20%] left-[10%] w-[70vw] h-[70vw] rounded-full mix-blend-screen opacity-15 blur-[90px] animate-breathe ${themeStyles.blob3}`} 
          style={{ animationDelay: '-10s' }} 
        />
+
+       {/* Ambient Layer - Strictly Background */}
+       {mode === 'rain' && <MessageRain />}
+       {mode === 'heat' && <HeatBurst />}
+       {mode === 'pulse' && <PulseWave />}
+       {mode === 'float' && <FloatingParticles />}
+       
+       {/* Emoji Layer - Deepest background element overlay */}
+       {emojis && emojis.length > 0 && <BackgroundEmojis emojis={emojis} />}
 
        {/* Layer 3: Vignette for focus */}
        <div className="absolute inset-0 bg-radial-vignette opacity-60" style={{ background: 'radial-gradient(circle at center, transparent 0%, #000 120%)' }} />
@@ -175,53 +347,35 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
     return () => clearTimeout(t);
   }, [currentSlideIndex]);
 
+  // Derive Chat Title
+  const chatTitle = useMemo(() => {
+    if (!data.users || data.users.length === 0) return 'ChatWrapped';
+    if (data.users.length > 2) return 'Group Chat';
+    // 1-on-1: Sort alphabetically for consistency
+    const names = data.users.map(u => u.name).sort((a, b) => a.localeCompare(b));
+    return names.join(' & ');
+  }, [data.users]);
+
   const slides: SlideType[] = useMemo(() => {
     const list: SlideType[] = ['INTRO', 'TOTAL'];
-    
-    // Group Chat Leaderboard (Immediately after TOTAL for groups)
-    if (data.users.length > 2) {
-      list.push('GROUP_LEADERBOARD');
-    }
-
+    if (data.users.length > 2) list.push('GROUP_LEADERBOARD');
     if (data.longestStreak >= 2) list.push('STREAKS');
-    
     if (data.silenceBreaker.maxSilenceHours > 1) {
       list.push('SILENCE_DURATION');
-      if (Object.keys(data.silenceBreakCounts).length > 0) {
-        list.push('SILENCE_LEADERBOARD');
-      }
+      if (Object.keys(data.silenceBreakCounts).length > 0) list.push('SILENCE_LEADERBOARD');
     }
-    
     list.push('ACTIVE_GRAPH', 'PEAK_HOUR', 'WEEKLY');
-    
     if (data.users.some(u => u.mediaMessageCount > 0)) list.push('MEDIA');
     if (data.burstStats.count > 0) list.push('RAPID_FIRE');
-    
-    // Only show VOLUME (1-on-1 split) if it's NOT a group chat
-    if (data.users.length <= 2) {
-      list.push('VOLUME');
-    }
-    
-    if (data.users.some(u => u.oneSidedConversationsCount > 0)) {
-        list.push('ONE_SIDED');
-    } else {
-        list.push('BALANCE');
-    }
-
+    if (data.users.length <= 2) list.push('VOLUME');
+    if (data.users.some(u => u.oneSidedConversationsCount > 0)) list.push('ONE_SIDED');
+    else list.push('BALANCE');
     if (data.longestMessage.wordCount > 20) list.push('ESSAYIST');
-    
     const hasVocab = data.users.some(u => u.topWords.length >= 3);
     if (hasVocab) list.push('VOCAB');
-    
     if (data.mostRepeatedPhrase && data.mostRepeatedPhrase.count > 3) list.push('REPEAT');
-    
     list.push('SILENCE_BREAKER');
-    
-    // Speed comparison only makes sense for 2 people or distinct differences
-    if (data.users.length > 0 && Math.abs(data.users[0].avgReplyTimeMinutes - (data.users[1]?.avgReplyTimeMinutes || 0)) > 1) {
-        list.push('SPEED');
-    }
-    
+    if (data.users.length > 0 && Math.abs(data.users[0].avgReplyTimeMinutes - (data.users[1]?.avgReplyTimeMinutes || 0)) > 1) list.push('SPEED');
     list.push('STYLES', 'FINAL');
     return list;
   }, [data]);
@@ -251,7 +405,7 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
       case 'SILENCE_DURATION': return 'dark';
       case 'SILENCE_LEADERBOARD': return 'blue';
       case 'ACTIVE_GRAPH': return 'blue';
-      case 'PEAK_HOUR': return 'orange'; // Energy for peak hour
+      case 'PEAK_HOUR': return 'orange';
       case 'WEEKLY': return 'purple';
       case 'MEDIA': return 'blue';
       case 'RAPID_FIRE': return 'orange';
@@ -266,6 +420,25 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
       case 'STYLES': return 'green';
       case 'FINAL': return 'dark';
       default: return 'purple';
+    }
+  };
+  
+  const getAmbientMode = (type: SlideType): 'rain' | 'heat' | 'pulse' | 'float' | 'none' => {
+    switch (type) {
+      case 'STREAKS': return 'heat';
+      case 'RAPID_FIRE': return 'pulse';
+      default: return 'none';
+    }
+  };
+
+  const getBackgroundEmojis = (type: SlideType): string[] => {
+    switch (type) {
+      case 'TOTAL': return ['💬'];
+      case 'STREAKS': return ['🔥'];
+      case 'RAPID_FIRE': return ['⚡'];
+      case 'SILENCE_BREAKER': return ['🤫'];
+      case 'SILENCE_DURATION': return ['😴'];
+      default: return [];
     }
   };
 
@@ -291,6 +464,7 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
             <div className="glass-panel px-6 py-3 rounded-full animate-fadeSlideUp opacity-0 fill-mode-forwards inline-block mx-auto" style={{ animationDelay: '300ms' }}>
               <p className="text-zinc-200 font-medium">Honest stats. Zero fluff.</p>
             </div>
+            <MicroExplanation text="Your conversation history, visualized." delay="800ms" />
             <p className="absolute bottom-12 left-0 right-0 text-xs text-zinc-500 uppercase tracking-widest animate-subtlePulse">Tap to start</p>
           </SlideWrapper>
         );
@@ -298,7 +472,7 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
       case 'TOTAL':
         return (
           <SlideWrapper>
-            <div className="mb-4 animate-fadeSlideUp opacity-0 fill-mode-forwards">
+            <div className="mb-4 animate-fadeSlideUp opacity-0 fill-mode-forwards relative z-10">
                <h3 className="text-2xl text-purple-200 font-bold opacity-80">You sent a total of</h3>
             </div>
             <RevealText className="mb-6" delay="100ms">
@@ -308,11 +482,12 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
                 </div>
               </GlowNumber>
             </RevealText>
-            <div className="flex gap-2 items-center text-zinc-400 animate-fadeSlideUp opacity-0 fill-mode-forwards" style={{ animationDelay: '300ms' }}>
+            <div className="flex gap-2 items-center text-zinc-400 animate-fadeSlideUp opacity-0 fill-mode-forwards relative z-10" style={{ animationDelay: '300ms' }}>
                <div className="h-[1px] w-12 bg-zinc-600"></div>
                <span className="text-sm font-mono tracking-wider uppercase">Messages</span>
             </div>
-            <div className="mt-12 glass-panel p-6 rounded-2xl animate-fadeSlideUp opacity-0 fill-mode-forwards max-w-xs" style={{ animationDelay: '500ms' }}>
+            <MicroExplanation text="Total messages exchanged in this chat." delay="600ms" />
+            <div className="mt-8 glass-panel p-6 rounded-2xl animate-fadeSlideUp opacity-0 fill-mode-forwards max-w-xs relative z-10" style={{ animationDelay: '500ms' }}>
               <p className="text-lg italic text-zinc-200">"That's a whole lot of typing."</p>
             </div>
           </SlideWrapper>
@@ -320,70 +495,80 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
 
       case 'GROUP_LEADERBOARD':
         // Sort users descending by message count
-        const sortedGroupUsers = [...data.users].sort((a, b) => b.messageCount - a.messageCount);
-        const top5 = sortedGroupUsers.slice(0, 5);
-        const othersCount = sortedGroupUsers.slice(5).reduce((acc, u) => acc + u.messageCount, 0);
+        const sortedUsers = [...data.users].sort((a, b) => b.messageCount - a.messageCount);
         
+        // Split Top 5 and Others
+        const topMembers = sortedUsers.slice(0, 5);
+        const remainingMembers = sortedUsers.slice(5);
+        
+        // Calculate Others Stats
+        const othersMsgCount = remainingMembers.reduce((acc, u) => acc + u.messageCount, 0);
+        const othersPeopleCount = remainingMembers.length;
+        const totalMsgs = data.totalMessages;
+
         return (
           <SlideWrapper>
-             <div className="mb-8 animate-fadeSlideUp">
-                <h2 className="text-3xl font-black text-white mb-2">Who talked how much 👥</h2>
-                <p className="text-zinc-400">Top contributors by message count</p>
+             <div className="mb-6 animate-fadeSlideUp">
+                <h2 className="text-3xl font-black text-white mb-2">Top Contributors 👥</h2>
+                <MicroExplanation text="The most active members in this group." delay="200ms" className="!mt-0 !text-left" />
              </div>
 
-             <div className="space-y-3">
-                {top5.map((u, i) => {
+             <div className="space-y-3 w-full">
+                {topMembers.map((u, i) => {
                   const isTop = i === 0;
+                  const percent = ((u.messageCount / totalMsgs) * 100).toFixed(1);
                   return (
                     <div 
                       key={u.name} 
                       className={`
-                        flex items-center justify-between p-4 rounded-xl animate-fadeSlideRight opacity-0 fill-mode-forwards
+                        flex items-center justify-between p-3 rounded-xl animate-fadeSlideRight opacity-0 fill-mode-forwards
                         ${isTop ? 'bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-500/30 shadow-[0_0_20px_rgba(168,85,247,0.15)]' : 'bg-white/5 border border-white/5'}
                       `}
-                      style={{ animationDelay: `${i * 150}ms` }}
+                      style={{ animationDelay: `${i * 100}ms` }}
                     >
-                       <div className="flex items-center gap-3">
-                          <span className={`font-mono text-sm ${isTop ? 'text-purple-300 font-bold' : 'text-zinc-500'}`}>
+                       <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <span className={`font-mono text-xs w-5 ${isTop ? 'text-purple-300 font-bold' : 'text-zinc-500'}`}>
                             #{i+1}
                           </span>
-                          <span className={`font-bold text-lg truncate max-w-[140px] ${isTop ? 'text-white' : 'text-zinc-200'}`}>
+                          <span className={`font-bold text-base truncate ${isTop ? 'text-white' : 'text-zinc-200'}`}>
                             {u.name}
                           </span>
                        </div>
-                       <div className="flex items-center gap-2">
-                          <span className={`font-mono font-bold ${isTop ? 'text-purple-300' : 'text-zinc-400'}`}>
+                       <div className="flex flex-col items-end ml-3">
+                          <span className={`font-mono font-bold text-sm ${isTop ? 'text-purple-300' : 'text-zinc-400'}`}>
                             {formatNum(u.messageCount)}
+                          </span>
+                          <span className="text-[10px] text-zinc-500">
+                            {percent}%
                           </span>
                        </div>
                     </div>
                   );
                 })}
                 
-                {othersCount > 0 && (
+                {othersPeopleCount > 0 && (
                   <div 
-                    className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/5 animate-fadeSlideRight opacity-0 fill-mode-forwards"
-                    style={{ animationDelay: `${top5.length * 150}ms` }}
+                    className="flex items-center justify-between p-3 bg-zinc-800/40 rounded-xl border border-zinc-700/30 animate-fadeSlideRight opacity-0 fill-mode-forwards"
+                    style={{ animationDelay: `${topMembers.length * 100}ms` }}
                   >
                      <div className="flex items-center gap-3">
-                        <span className="font-mono text-sm text-zinc-500">
+                        <span className="font-mono text-xs text-zinc-600 w-5">
                           ...
                         </span>
-                        <span className="font-bold text-zinc-400 text-lg">
-                          Others
+                        <span className="font-bold text-zinc-400 text-base">
+                          Others ({othersPeopleCount})
                         </span>
                      </div>
-                     <div className="flex items-center gap-2">
-                        <span className="font-mono text-zinc-500 font-bold">
-                          {formatNum(othersCount)}
+                     <div className="flex flex-col items-end ml-3">
+                        <span className="font-mono text-zinc-500 font-bold text-sm">
+                          {formatNum(othersMsgCount)}
+                        </span>
+                        <span className="text-[10px] text-zinc-600">
+                          {((othersMsgCount / totalMsgs) * 100).toFixed(1)}%
                         </span>
                      </div>
                   </div>
                 )}
-             </div>
-             
-             <div className="mt-8 text-center glass-panel p-4 rounded-xl animate-fadeSlideUp opacity-0 fill-mode-forwards max-w-xs mx-auto" style={{ animationDelay: '800ms' }}>
-                <p className="text-zinc-300 italic">"Some voices were louder than others."</p>
              </div>
           </SlideWrapper>
         );
@@ -394,10 +579,10 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
              <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-40">
                <div className="w-[300px] h-[300px] bg-orange-500/20 rounded-full blur-[80px] animate-subtlePulse" />
              </div>
-             <div className="flex justify-center mb-8 relative animate-fadeSlideUp">
+             <div className="flex justify-center mb-8 relative animate-fadeSlideUp z-10">
                <Flame size={100} className="text-orange-500 relative z-10 filter drop-shadow-[0_0_30px_rgba(249,115,22,0.6)]" />
              </div>
-             <div className="inline-block text-orange-200 uppercase text-xs font-bold tracking-widest mb-6 mx-auto animate-fadeSlideUp opacity-0 fill-mode-forwards" style={{ animationDelay: '100ms' }}>
+             <div className="inline-block text-orange-200 uppercase text-xs font-bold tracking-widest mb-6 mx-auto animate-fadeSlideUp opacity-0 fill-mode-forwards relative z-10" style={{ animationDelay: '100ms' }}>
                Longest Streak
              </div>
              <RevealText className="mb-2" delay="200ms">
@@ -407,19 +592,20 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
                  </div>
                </GlowNumber>
              </RevealText>
-             <div className="text-2xl font-bold text-zinc-400 mb-12 animate-fadeSlideUp opacity-0 fill-mode-forwards" style={{ animationDelay: '300ms' }}>days in a row</div>
+             <div className="text-2xl font-bold text-zinc-400 mb-6 animate-fadeSlideUp opacity-0 fill-mode-forwards relative z-10" style={{ animationDelay: '300ms' }}>days in a row</div>
+             <MicroExplanation text="Consecutive days where at least one message was sent." delay="500ms" />
           </SlideWrapper>
         );
 
       case 'SILENCE_DURATION':
         return (
           <SlideWrapper className="text-center">
-             <div className="flex justify-center mb-8 animate-fadeSlideUp">
+             <div className="flex justify-center mb-8 animate-fadeSlideUp relative z-10">
                 <div className="p-6 bg-indigo-500/10 rounded-full border border-indigo-500/30 shadow-[0_0_40px_rgba(99,102,241,0.3)]">
                   <Moon size={50} className="text-indigo-300" />
                 </div>
              </div>
-             <h2 className="text-xl font-bold uppercase tracking-widest text-indigo-200 mb-2 animate-fadeSlideUp opacity-0 fill-mode-forwards" style={{ animationDelay: '100ms' }}>Longest Silence 💤</h2>
+             <h2 className="text-xl font-bold uppercase tracking-widest text-indigo-200 mb-2 animate-fadeSlideUp opacity-0 fill-mode-forwards relative z-10" style={{ animationDelay: '100ms' }}>Longest Silence 💤</h2>
              <RevealText className="mb-8" delay="200ms">
                 <GlowNumber color="bg-indigo-500">
                   <div className="text-5xl font-black text-white leading-tight">
@@ -427,9 +613,10 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
                   </div>
                 </GlowNumber>
              </RevealText>
-             <div className="bg-gradient-to-r from-indigo-900/40 to-purple-900/40 p-6 rounded-2xl border border-indigo-500/20 animate-fadeSlideUp opacity-0 fill-mode-forwards backdrop-blur-md" style={{ animationDelay: '400ms' }}>
+             <div className="bg-gradient-to-r from-indigo-900/40 to-purple-900/40 p-6 rounded-2xl border border-indigo-500/20 animate-fadeSlideUp opacity-0 fill-mode-forwards backdrop-blur-md relative z-10" style={{ animationDelay: '400ms' }}>
                 <p className="text-indigo-100 text-lg font-medium italic">"It felt like an eternity."</p>
              </div>
+             <MicroExplanation text="The longest gap between two messages." delay="600ms" />
           </SlideWrapper>
         );
 
@@ -441,7 +628,7 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
           <SlideWrapper>
              <div className="mb-8 animate-fadeSlideUp">
                 <h2 className="text-3xl font-black text-white mb-2">Breaking the Silence 👋</h2>
-                <p className="text-zinc-400">Who restarted the conversation most?</p>
+                <MicroExplanation text="Who restarted the conversation after it went quiet." delay="100ms" className="!mt-0 !text-left" />
              </div>
              <div className="space-y-4">
                 {silenceSorted.map(([name, count], i) => (
@@ -474,6 +661,7 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
              <div className="h-64 w-full bg-black/40 backdrop-blur-md rounded-3xl p-6 border border-white/10 shadow-2xl animate-fadeSlideUp opacity-0 fill-mode-forwards" style={{ animationDelay: '200ms' }}>
                 <HourlyHeatmap data={data.hourlyHeatmap} />
              </div>
+             <MicroExplanation text="A heatmap of activity by hour of the day." delay="400ms" />
           </SlideWrapper>
         );
 
@@ -497,6 +685,7 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
             <div className="mb-8 animate-fadeSlideUp opacity-0 fill-mode-forwards" style={{ animationDelay: '300ms' }}>
                <span className="text-sm font-bold uppercase tracking-widest text-white/80">Most Active Hour</span>
             </div>
+            <MicroExplanation text="The specific hour when you talked the most." delay="500ms" />
           </SlideWrapper>
         );
 
@@ -528,42 +717,70 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
                  <span className="text-green-400 font-bold text-xl">{(['Sundays','Mondays','Tuesdays','Wednesdays','Thursdays','Fridays','Saturdays'])[busiestDayIndex]}</span> are chaos.
                </p>
             </div>
+            <MicroExplanation text="Message volume breakdown by day of the week." delay="800ms" />
           </SlideWrapper>
         );
 
       case 'MEDIA':
+        const totalMedia = data.users.reduce((acc, u) => acc + u.mediaMessageCount, 0);
+        // Sort by media count descending
+        const sortedMedia = [...data.users].sort((a, b) => b.mediaMessageCount - a.mediaMessageCount);
+        
+        // Determine limit (5 for groups, 2 for 1:1)
+        const mediaLimit = isGroup ? 5 : 2;
+        const topMediaUsers = sortedMedia.slice(0, mediaLimit).filter(u => u.mediaMessageCount > 0);
+        
+        // Calculate "Others"
+        const remainingMediaUsers = sortedMedia.slice(mediaLimit);
+        const othersMediaCount = remainingMediaUsers.reduce((acc, u) => acc + u.mediaMessageCount, 0);
+
         return (
           <SlideWrapper className="text-center">
              <div className="w-24 h-24 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-8 border border-blue-500/30 animate-fadeSlideUp">
                <Image size={40} className="text-blue-300" />
              </div>
              <h2 className="text-3xl font-bold text-white mb-2 animate-fadeSlideUp opacity-0 fill-mode-forwards" style={{ animationDelay: '100ms' }}>Media Moments</h2>
-             <RevealText className="mb-12" delay="200ms">
+             <RevealText className="mb-8" delay="200ms">
                <GlowNumber color="bg-blue-500">
                  <div className="text-7xl font-black text-white">
-                   <CountUp end={data.users.reduce((acc, u) => acc + u.mediaMessageCount, 0)} />
+                   <CountUp end={totalMedia} />
                  </div>
                </GlowNumber>
              </RevealText>
-             <div className="w-full max-w-xs mx-auto space-y-3">
-                {[u1, u2].map((u, i) => (
-                   <div key={i} className="flex justify-between items-center bg-white/5 p-4 rounded-xl animate-fadeSlideRight opacity-0 fill-mode-forwards" style={{ animationDelay: `${400 + (i * 150)}ms` }}>
-                      <span className="font-bold text-zinc-300">{u.name}</span>
-                      <span className="font-mono text-blue-400 font-bold"><CountUp end={u.mediaMessageCount} delay={800} /></span>
+             
+             <div className="w-full max-w-sm mx-auto space-y-2">
+                {topMediaUsers.map((u, i) => (
+                   <div key={u.name} className="flex justify-between items-center bg-white/5 p-3 rounded-xl animate-fadeSlideRight opacity-0 fill-mode-forwards" style={{ animationDelay: `${400 + (i * 150)}ms` }}>
+                      <div className="flex items-center gap-3 overflow-hidden">
+                         {isGroup && <span className="text-xs text-zinc-500 font-mono w-4">#{i + 1}</span>}
+                         <span className="font-bold text-zinc-300 truncate">{u.name}</span>
+                      </div>
+                      <span className="font-mono text-blue-400 font-bold shrink-0"><CountUp end={u.mediaMessageCount} delay={800} /></span>
                    </div>
                 ))}
+
+                {othersMediaCount > 0 && (
+                   <div className="flex justify-between items-center bg-zinc-800/40 p-3 rounded-xl animate-fadeSlideRight opacity-0 fill-mode-forwards border border-zinc-700/30" style={{ animationDelay: `${400 + (topMediaUsers.length * 150)}ms` }}>
+                      <div className="flex items-center gap-3">
+                         {isGroup && <span className="text-xs text-zinc-600 font-mono w-4">...</span>}
+                         <span className="font-bold text-zinc-400">Others ({remainingMediaUsers.length})</span>
+                      </div>
+                      <span className="font-mono text-zinc-500 font-bold"><CountUp end={othersMediaCount} delay={800} /></span>
+                   </div>
+                )}
              </div>
+             <MicroExplanation text="Photos, videos, and stickers shared." delay="800ms" />
           </SlideWrapper>
         );
 
       case 'RAPID_FIRE':
         return (
           <SlideWrapper>
-            <div className="flex items-center justify-center gap-3 mb-6 text-orange-400 animate-fadeSlideUp">
+            <div className="flex items-center justify-center gap-3 mb-6 text-orange-400 animate-fadeSlideUp relative z-10">
               <Zap size={36} className="animate-subtlePulse" />
             </div>
-            <h2 className="text-3xl font-black uppercase text-center mb-12 animate-fadeSlideUp opacity-0 fill-mode-forwards" style={{ animationDelay: '100ms' }}>Rapid Fire 🔥</h2>
-            <div className="flex flex-col gap-12 items-center w-full">
+            <h2 className="text-3xl font-black uppercase text-center mb-12 animate-fadeSlideUp opacity-0 fill-mode-forwards relative z-10" style={{ animationDelay: '100ms' }}>Rapid Fire 🔥</h2>
+            <div className="flex flex-col gap-12 items-center w-full relative z-10">
                <div className="text-center animate-fadeSlideRight opacity-0 fill-mode-forwards w-full" style={{ animationDelay: '200ms' }}>
                   <GlowNumber color="bg-orange-500">
                      <div className="text-8xl font-black text-white mb-2 leading-none"><CountUp end={data.burstStats.count} /></div>
@@ -578,6 +795,7 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
                    <div className="text-red-200/60 text-sm font-bold uppercase tracking-widest mt-2">Max Burst</div>
                </div>
             </div>
+            <MicroExplanation text="Moments where messages were sent rapidly without pause." delay="600ms" />
           </SlideWrapper>
         );
 
@@ -588,6 +806,7 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
           <div className="flex flex-col h-full relative z-10">
             <div className="absolute top-8 left-0 w-full text-center z-20 animate-fadeSlideUp">
               <h2 className="text-xl font-bold uppercase tracking-widest text-white/90 drop-shadow-md">Message Volume</h2>
+              <MicroExplanation text="Percentage of total messages sent by each person." delay="200ms" className="!mt-1" />
             </div>
             <div className="flex-1 flex w-full h-full relative">
               <div className="absolute left-1/2 top-0 bottom-0 w-[2px] bg-white/10 z-30 dashed-line"></div>
@@ -611,17 +830,25 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
         const carrier = data.users.reduce((prev, curr) => (prev.oneSidedConversationsCount > curr.oneSidedConversationsCount) ? prev : curr);
         return (
            <SlideWrapper className="text-center">
-              <h2 className="text-2xl font-bold uppercase tracking-widest text-pink-300 mb-8 animate-fadeSlideUp">Main Character Energy</h2>
+              <h2 className="text-2xl font-bold uppercase tracking-widest text-pink-300 mb-8 animate-fadeSlideUp">Main Character Energy ✨</h2>
               <div className="animate-fadeSlideUp opacity-0 fill-mode-forwards" style={{ animationDelay: '100ms' }}>
                  <div className="text-6xl mb-6 animate-subtlePulse">🎒</div>
-                 <div className="text-3xl font-black text-white mb-4">{carrier.name}</div>
-                 <p className="text-pink-200/70 text-sm mb-12">Carried the chat on</p>
+                 
+                 {/* Primary Line */}
+                 <div className="text-3xl font-black text-white mb-2">{carrier.name}</div>
+                 
+                 {/* Secondary Line - Message Count */}
+                 <div className="text-lg text-pink-200/90 font-medium mb-8">
+                    Sent <span className="font-bold text-white">{formatNum(carrier.messageCount)}</span> messages
+                 </div>
+
+                 <p className="text-pink-200/50 text-xs uppercase tracking-widest mb-4">Dominated the chat for</p>
                  <GlowNumber color="bg-pink-500">
-                    <div className="text-9xl font-black text-white mb-4 leading-none">{carrier.oneSidedConversationsCount}</div>
+                    <div className="text-8xl font-black text-white mb-4 leading-none">{carrier.oneSidedConversationsCount}</div>
                  </GlowNumber>
                  <div className="text-xs font-bold uppercase tracking-widest text-pink-400 mt-2">Days</div>
               </div>
-              <p className="mt-12 text-zinc-400 text-sm animate-fadeSlideUp opacity-0 fill-mode-forwards" style={{ animationDelay: '300ms' }}>Days where they sent &gt;75% of messages</p>
+              <MicroExplanation text="Days where one person dominated the conversation." delay="300ms" />
            </SlideWrapper>
         );
 
@@ -639,6 +866,7 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
                     <span className="text-xs bg-purple-500/20 px-2 py-1 rounded text-purple-200">{data.longestMessage.wordCount} words</span>
                  </div>
               </div>
+              <MicroExplanation text="The longest single message sent." delay="300ms" />
            </SlideWrapper>
         );
 
@@ -651,8 +879,8 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
                     const total = u.textMessageCount + u.emojiMessageCount;
                     const emojiPct = total > 0 ? (u.emojiMessageCount / total) * 100 : 0;
                     return (
-                       <div key={i} className="animate-fadeSlideRight opacity-0 fill-mode-forwards" style={{ animationDelay: `${i * 200}ms` }}>
-                          <div className="flex justify-between mb-2 text-white font-bold">
+                       <div key={i} className="animate-fadeSlideRight opacity-0 fill-mode-forwards group" style={{ animationDelay: `${i * 200}ms` }}>
+                          <div className="flex justify-between mb-2 text-white font-bold group-hover:scale-[1.02] transition-transform duration-300 origin-left">
                              <span>{u.name}</span>
                              <span className="text-xs text-green-400">{emojiPct.toFixed(1)}% Emoji</span>
                           </div>
@@ -668,6 +896,7 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
                  <div className="flex items-center gap-2"><div className="w-3 h-3 bg-yellow-400 rounded-full"/> Emoji</div>
                  <div className="flex items-center gap-2"><div className="w-3 h-3 bg-zinc-600 rounded-full"/> Text</div>
               </div>
+              <MicroExplanation text="Ratio of text-only messages vs. messages with emojis." delay="600ms" />
            </SlideWrapper>
         );
 
@@ -677,7 +906,7 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
               <h2 className="text-3xl font-black text-center mb-2 animate-fadeSlideUp bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-green-400">Signature Words</h2>
               <div className="space-y-6 mt-8">
                  {data.users.slice(0, 2).map((u, i) => (
-                    <div key={i} className="glass-panel p-5 rounded-2xl animate-fadeSlideRight opacity-0 fill-mode-forwards" style={{ animationDelay: `${i * 200}ms` }}>
+                    <div key={i} className="glass-panel p-5 rounded-2xl animate-fadeSlideRight opacity-0 fill-mode-forwards hover:scale-[1.02] transition-transform duration-300" style={{ animationDelay: `${i * 200}ms` }}>
                        <div className="font-bold text-zinc-400 mb-3 text-sm uppercase flex items-center gap-2">
                           <span className="w-2 h-2 rounded-full" style={{ backgroundColor: u.color }}/> {u.name}
                        </div>
@@ -691,6 +920,7 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
                     </div>
                  ))}
               </div>
+              <MicroExplanation text="Unique words used frequently by each person." delay="600ms" />
            </SlideWrapper>
         );
 
@@ -714,6 +944,7 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
                     Said mostly by <span className="text-white font-bold">{phrase.topUser}</span>
                  </div>
               </div>
+              <MicroExplanation text="The phrase that kept coming up." delay="600ms" />
            </SlideWrapper>
         );
 
@@ -731,12 +962,13 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
                     {data.silenceBreaker.name}
                  </h2>
                </RevealText>
-               <p className="text-zinc-400 text-sm mb-12 animate-fadeSlideUp opacity-0 fill-mode-forwards" style={{ animationDelay: '300ms' }}>Revived the chat most often</p>
+               <p className="text-zinc-400 text-sm mb-8 animate-fadeSlideUp opacity-0 fill-mode-forwards" style={{ animationDelay: '300ms' }}>Revived the chat most often</p>
                
                <div className="animate-fadeSlideUp opacity-0 fill-mode-forwards" style={{ animationDelay: '400ms' }}>
                   <div className="text-[10px] text-zinc-500 uppercase mb-2">Max Silence Broken</div>
                   <div className="text-3xl font-black text-white">{Math.floor(data.silenceBreaker.maxSilenceHours / 24)}d {data.silenceBreaker.maxSilenceHours % 24}h</div>
                </div>
+               <MicroExplanation text="The person who ends the awkward silences." delay="600ms" />
             </SlideWrapper>
          );
 
@@ -757,6 +989,7 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
                      </div>
                   ))}
                </div>
+               <MicroExplanation text="Average time taken to reply to a message." delay="600ms" />
             </SlideWrapper>
          );
 
@@ -780,12 +1013,13 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
                      );
                   })}
                </div>
+               <MicroExplanation text="Analysis based on average message length." delay="600ms" />
             </SlideWrapper>
          );
 
       case 'FINAL':
         return (
-          <div className="flex flex-col h-full pt-6 pb-12 px-6 overflow-y-auto scrollbar-hide pointer-events-auto relative z-10">
+          <div className="flex flex-col h-full pt-6 pb-16 px-6 overflow-y-auto scrollbar-hide pointer-events-auto relative z-10">
             <h2 className="text-center text-lg font-bold mb-6 animate-fadeSlideUp text-zinc-400">The Receipt 🧾</h2>
             <div className="bg-zinc-950 border border-zinc-800 p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden animate-fadeSlideUp opacity-0 fill-mode-forwards mx-auto w-full max-w-sm" style={{ animationDelay: '100ms' }}>
                <div className="absolute top-0 right-0 w-40 h-40 bg-purple-600/20 rounded-full blur-[80px]" />
@@ -823,6 +1057,8 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
                   <p className="text-[10px] text-zinc-600 font-mono">GENERATED LOCALLY BY CHATWRAPPED</p>
                </div>
             </div>
+            
+            <MicroExplanation text="Your complete chat summary." delay="600ms" />
 
             <div className="mt-8 flex flex-col gap-3 max-w-sm mx-auto w-full animate-fadeSlideUp opacity-0 fill-mode-forwards relative z-50" style={{ animationDelay: '700ms' }}>
                <button onClick={() => setShowSearch(true)} className="bg-zinc-800 text-white py-4 rounded-full font-bold flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all shadow-lg">
@@ -843,16 +1079,37 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
 
   return (
     <div className="fixed inset-0 w-full h-full bg-[#09090b] text-white overflow-hidden flex flex-col font-sans select-none">
-      <LivingBackground theme={getTheme(currentSlideType)} />
+      <LivingBackground theme={getTheme(currentSlideType)} mode={getAmbientMode(currentSlideType)} emojis={getBackgroundEmojis(currentSlideType)} />
       
       {showSearch && <WordSearch data={data} onClose={() => setShowSearch(false)} />}
 
-      <div className="absolute top-0 left-0 right-0 z-50 flex gap-1 p-2 pt-4 safe-top px-4">
-        {slides.map((_, i) => (
-          <div key={i} className="h-1 flex-1 bg-white/20 rounded-full overflow-hidden backdrop-blur-sm">
-            <div className={`h-full bg-white transition-all duration-300 ease-linear ${i < currentSlideIndex ? 'w-full' : i === currentSlideIndex ? 'w-full animate-growWidth' : 'w-0'}`} />
-          </div>
-        ))}
+      <div className="absolute top-0 left-0 right-0 z-50 flex flex-col px-2 pt-2 safe-top">
+        <div className="flex gap-1 h-1 mb-3">
+          {slides.map((_, i) => (
+            <div key={i} className="flex-1 bg-white/20 rounded-full overflow-hidden backdrop-blur-sm">
+              <div className={`h-full bg-white transition-all duration-300 ease-linear ${i < currentSlideIndex ? 'w-full' : i === currentSlideIndex ? 'w-full animate-growWidth' : 'w-0'}`} />
+            </div>
+          ))}
+        </div>
+        
+        {/* Chat Identity */}
+        <div className="px-1 flex justify-between items-start">
+             <div className="text-white/80 font-medium text-[13px] truncate drop-shadow-md opacity-80 max-w-[80%]">
+                 {chatTitle}
+             </div>
+        </div>
+      </div>
+
+      {/* Creator Credit - Bottom Center */}
+      <div className="absolute bottom-3 left-0 right-0 z-[60] flex justify-center pointer-events-none">
+        <a 
+          href="https://www.instagram.com/dhananjay_tech/" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="pointer-events-auto text-[11px] text-white/50 hover:text-white/80 transition-colors cursor-pointer drop-shadow-md font-medium"
+        >
+          ChatWrapped by @Dhananjay_Tech
+        </a>
       </div>
 
       <div className="absolute inset-0 z-20 flex">
