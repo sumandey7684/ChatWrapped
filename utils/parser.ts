@@ -19,13 +19,13 @@ import { Message, AnalysisResult, UserStat, ParseResult } from '../types';
 const TIMESTAMP_PATTERN = /^\[?(\d{1,4}[-./]\d{1,2}[-./]\d{2,4})[,.]?\s+(\d{1,2}[:.]\d{2}(?:[:.]\d{2})?(?:\s?[a-zA-Z]{1,2})?)\]?(?:\s-\s)?/;
 
 // Emoji Regex for stats
-// Note: \p{Emoji_Presentation} is ES2018. If this fails in older browsers, we might need a polyfill or range.
-// Keeping it for now as the error was specific to \p{Han}.
 const EMOJI_REGEX = /\p{Emoji_Presentation}/gu;
 
 // Common Stop Words (English default, can be expanded but kept minimal for performance)
 const STOP_WORDS = new Set([
-  'the','be','to','of','and','a','in','that','have','i','it','for','not','on','with','he','as','you','do','at','this','but','his','by','from','they','we','say','her','she','or','an','will','my','one','all','would','there','their','what','so','up','out','if','about','who','get','which','go','me','when','make','can','like','time','no','just','him','know','take','people','into','year','your','good','some','could','them','see','other','than','then','now','look','only','come','its','over','think','also','back','after','use','two','how','our','work','first','well','way','even','new','want','because','any','these','give','day','most','us', 'is', 'are', 'was', 'were', 'has', 'had', 'been', 'ok', 'okay', 'lol', 'haha', 'haha', 'haha', 'yeah', 'yes', 'hey', 'hi', 'hello', 'omg', 'did', 'done', 'too', 'very', 'much', 'really', 'got', 'don', 'dont', 'didnt', 'can', 'cant', 'cannot', 'pm', 'am', 'omitted'
+  'the','be','to','of','and','a','in','that','have','i','it','for','not','on','with','he','as','you','do','at','this','but','his','by','from','they','we','say','her','she','or','an','will','my','one','all','would','there','their','what','so','up','out','if','about','who','get','which','go','me','when','make','can','like','time','no','just','him','know','take','people','into','year','your','good','some','could','them','see','other','than','then','now','look','only','come','its','over','think','also','back','after','use','two','how','our','work','first','well','way','even','new','want','because','any','these','give','day','most','us', 'is', 'are', 'was', 'were', 'has', 'had', 'been', 'ok', 'okay', 'lol', 'haha', 'haha', 'haha', 'yeah', 'yes', 'hey', 'hi', 'hello', 'omg', 'did', 'done', 'too', 'very', 'much', 'really', 'got', 'don', 'dont', 'didnt', 'can', 'cant', 'cannot', 'pm', 'am', 'omitted',
+  // Added based on feedback to clean up stats
+  'message', 'deleted', 'delete', 'edited', 'edit'
 ]);
 
 // Basic Media Phrases (English/Generic) + Angle Bracket Check in Logic
@@ -173,17 +173,10 @@ export const parseChatFile = async (file: File): Promise<ParseResult> => {
               const sender = remainder.substring(0, firstColonIndex).trim();
               const content = remainder.substring(firstColonIndex + 1).trim();
 
-              // Filter out system messages that might accidentally have colons but are known system senders?
-              // WhatsApp usually doesn't have system messages with colons like "Messages ... : ..."
-              // But we can filter standard "end-to-end encrypted" messages if they appear as sender? Unlikely.
-              
               const newMessage: Message = { date, sender, content };
               messages.push(newMessage);
               lastMessage = newMessage;
             } else {
-              // No colon -> System Message (e.g. "You changed the subject", "Security code changed")
-              // We skip these for stats, but we DO NOT append to previous message.
-              // It breaks the previous message chain.
               lastMessage = null;
             }
           }
@@ -296,16 +289,31 @@ export const analyzeMessages = (messages: Message[], yearFilter?: number): Analy
     // Basic Stats
     uStat.count++;
     
-    // Check for Media
-    // International Rule: ANY line wrapped in < > is media/system
+    // Check for Media & Ignored System Messages
     const contentTrimmed = msg.content.trim();
+    const lowerContent = contentTrimmed.toLowerCase();
+
+    // International Rule: ANY line wrapped in < > is media/system
     const isAngleBracketMedia = /^<.+>$/.test(contentTrimmed);
-    const isStandardMedia = MEDIA_PHRASES_BASE.some(phrase => contentTrimmed.toLowerCase().includes(phrase));
+    const isStandardMedia = MEDIA_PHRASES_BASE.some(phrase => lowerContent.includes(phrase));
     const isMedia = isAngleBracketMedia || isStandardMedia;
+
+    // Check for "Deleted Message" or "Edited Message" variations to exclude from Signature Words/Repeated Phrases
+    const isSystemMsg = 
+        lowerContent.includes('this message was deleted') || 
+        lowerContent.includes('you deleted this message') ||
+        lowerContent === 'this message was delete' || 
+        lowerContent === 'this message' ||
+        lowerContent.includes('this message was edited') ||
+        lowerContent.includes('was edited');
 
     if (isMedia) {
       uStat.mediaMessageCount++;
       // Skip word analysis for media
+    } else if (isSystemMsg) {
+      // Skip word analysis for system deletion/edit messages to avoid polluting stats
+      // We still count them in total messages (uStat.count already incremented)
+      // but they contribute 0 words.
     } else {
       // Regular Text Analysis
       // Split by whitespace (basic unicode support)
@@ -332,19 +340,13 @@ export const analyzeMessages = (messages: Message[], yearFilter?: number): Analy
       }
 
       // Word & Phrase Analysis
-      // Filter out emojis and punctuation for word cloud
-      // Using Unicode property escapes for letters/numbers might be safer but support varies.
-      // We'll stick to basic cleanup: remove common punctuation.
       const cleanContent = msg.content.toLowerCase().replace(/[^\p{L}\p{N}\s']/gu, ''); 
       const words = cleanContent.split(/\s+/).filter(w => w.length > 0);
       
       if (words.length > 0) {
         // Words
         words.forEach(w => {
-          // Simple length check to avoid single chars unless CJK?
-          // For now, length > 1 or CJK char
-          // Fix: \p{Han} can cause "Invalid property name" in some environments. 
-          // Using standard CJK Unicode range instead: \u4E00-\u9FFF (CJK Unified Ideographs)
+          // Standard CJK Unicode range: \u4E00-\u9FFF
           if ((w.length > 2 || /[\u4E00-\u9FFF]/.test(w)) && !STOP_WORDS.has(w)) {
             uStat.wordFreq.set(w, (uStat.wordFreq.get(w) || 0) + 1);
             if (!wordGlobalMap[w]) wordGlobalMap[w] = {};
