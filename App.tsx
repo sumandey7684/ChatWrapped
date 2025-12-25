@@ -139,7 +139,7 @@ function App() {
               ChatWrapped
             </div>
             <a 
-              href="https://github.com/DhananjayBhosale/ChatWrapped" 
+              href="https://github.com/sumandey7684/chat-recape" 
               target="_blank" 
               rel="noopener noreferrer"
               className="text-zinc-400 hover:text-white transition-colors"
@@ -186,12 +186,12 @@ function App() {
               </p>
               
               <a 
-                href="https://www.instagram.com/dhananjay_tech/" 
+                href="https://www.instagram.com/sumxn.911/" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="block mt-6 text-xs text-zinc-600 hover:text-purple-400 transition-colors font-medium tracking-wide uppercase"
               >
-                Made by Dhananjay_Tech
+                Made by Suman Dey with ❤️
               </a>
             </div>
             

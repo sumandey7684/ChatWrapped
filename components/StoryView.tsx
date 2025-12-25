@@ -1321,15 +1321,15 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
                {/* Footer Links */}
                <div className="pt-12 text-center space-y-4 animate-fadeSlideUp opacity-0 fill-mode-forwards" style={{ animationDelay: '400ms' }}>
                  <a 
-                   href="https://dhananjaytech.app" 
+                   href="https://sumxnn.vercel.app/" 
                    target="_blank" 
                    rel="noopener noreferrer"
                    className="inline-block text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-white transition-colors border-b border-zinc-800 pb-1"
                  >
-                   Check more websites by Dhananjay_Tech
+                   Check more websites by Suman Dey
                  </a>
                  <div className="text-[10px] text-zinc-600 font-medium">
-                   Made by <a href="https://dhananjaytech.app" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white transition-colors">Dhananjay_Tech</a>
+                   Made by <a href="https://sumxnn.vercel.app/" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white transition-colors">Suman Dey</a>
                  </div>
                </div>
         
@@ -1396,12 +1396,12 @@ const StoryView: React.FC<StoryViewProps> = ({ data, selectedYear, onReset, onCo
       {/* Creator Credit - Bottom Center */}
       <div className="absolute bottom-3 left-0 right-0 z-[60] flex justify-center pointer-events-none">
         <a 
-          href="https://www.instagram.com/dhananjay_tech/" 
+          href="https://www.x.com/sumxnnn/" 
           target="_blank" 
           rel="noopener noreferrer"
           className="pointer-events-auto text-[11px] text-white/50 hover:text-white/80 transition-colors cursor-pointer drop-shadow-md font-medium"
         >
-          ChatWrapped by @Dhananjay_Tech
+          ChatWrapped by Suman Dey
         </a>
       </div>
 
